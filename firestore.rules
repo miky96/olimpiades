@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// Reglament base per a l'MVP.
+// - Participants (públic sense login): poden llegir classificacions i dades
+//   derivades, mai escriure.
+// - Admins i superadmins: poden escriure. El rol es guarda a /users/{uid}.
+//   A futur es migrarà a custom claims per no haver de llegir l'usuari a cada
+//   regla. A l'MVP, mantenim la simplicitat al preu d'una lectura extra.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function userStatus() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status;
+    }
+
+    function isActiveAdmin() {
+      return isSignedIn()
+        && userStatus() == 'active'
+        && (userRole() == 'admin' || userRole() == 'superadmin');
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn()
+        && userStatus() == 'active'
+        && userRole() == 'superadmin';
+    }
+
+    // --- Gestió d'usuaris (només superadmin) ---
+    match /users/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid || isSuperAdmin();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // --- Temporades i continguts relacionats ---
+    // Lectura pública; escriptura només admins.
+    match /seasons/{seasonId} {
+      allow read: if true;
+      allow create, update: if isActiveAdmin();
+      allow delete: if isSuperAdmin();
+
+      match /participants/{participantId} {
+        allow read: if true;
+        allow write: if isActiveAdmin();
+      }
+
+      match /events/{eventId} {
+        allow read: if true;
+        allow write: if isActiveAdmin();
+
+        match /teams/{teamId} {
+          allow read: if true;
+          allow write: if isActiveAdmin();
+        }
+
+        match /attendance/{participantId} {
+          allow read: if true;
+          allow write: if isActiveAdmin();
+        }
+
+        match /matches/{matchId} {
+          allow read: if true;
+          allow write: if isActiveAdmin();
+        }
+
+        match /finalStandings/{docId} {
+          allow read: if true;
+          allow write: if isActiveAdmin();
+        }
+      }
+    }
+  }
+}
