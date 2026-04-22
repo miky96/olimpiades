@@ -57,6 +57,26 @@ Tres formats disponibles en crear l'esdeveniment:
 La puntuació general de la temporada només depèn de la **posició final** a
 l'esdeveniment, no dels resultats de fases intermèdies.
 
+### Càlcul de la posició final
+
+Implementat a `src/domain/finalStandings.ts`. Regla simple adequada per a
+l'MVP: la "profunditat" de cada equip és la ronda més alta on ha guanyat
+(o ha rebut un bye). Les posicions es calculen amb empats densos sobre
+aquestes profunditats:
+
+- **single_match**: guanyador → pos 1 (score 1), perdedor → pos 2 (score 0).
+- **bracket**: campió → pos 1, finalista → pos 2, semifinalistes eliminats
+  → pos 3 (empatats), quarts eliminats → pos 4 (empatats), etc.
+- **group_stage_bracket**: els equips que passen al bracket competeixen
+  seguint la mateixa regla que un bracket normal; els no-qualificats queden
+  tots empatats a la darrera posició (que amb les regles de puntuació dona
+  0 punts de posició igualment).
+
+Quan l'admin pitja "Finalitzar i calcular punts" s'executa aquest càlcul
+junt amb `calculateEventPoints` (domini) i el resultat es persisteix al
+document de l'event (`finalStandings` + `pointsBreakdown`). La classificació
+general agrega només `pointsBreakdown` dels events amb `status === "finished"`.
+
 ## Stack tècnic
 
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + React Router.

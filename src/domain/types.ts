@@ -52,6 +52,18 @@ export interface OlimpiadaEvent {
   format: EventFormat;
   status: EventStatus;
   config: EventFormatConfig;
+  /** Nom opcional (si l'admin vol afegir-ne un). */
+  name?: string;
+  /** Es persisteix quan es finalitza l'esdeveniment. */
+  finalStandings?: FinalStanding[];
+  /** Desglossament de punts per participant, guardat al finalitzar. */
+  pointsBreakdown?: {
+    participantId: string;
+    positionPoints: number;
+    bonusPoints: number;
+    penaltyPoints: number;
+    total: number;
+  }[];
 }
 
 export interface Team {
@@ -59,6 +71,8 @@ export interface Team {
   eventId: string;
   name: string;
   participantIds: string[];
+  /** Només per a format "group_stage_bracket": grup assignat un cop iniciada la competició. */
+  groupId?: string;
 }
 
 /**
