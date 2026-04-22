@@ -31,3 +31,5 @@ ui-debug.log
 
 # Tests
 coverage/
+src/**/*.js
+src/**/*.test.js
