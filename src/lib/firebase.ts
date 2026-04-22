@@ -7,6 +7,7 @@ import { initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
 import {
   getFirestore,
+  initializeFirestore,
   connectFirestoreEmulator,
   type Firestore,
 } from "firebase/firestore";
@@ -33,7 +34,16 @@ export function getFirebaseApp(): FirebaseApp {
 
 export function getDb(): Firestore {
   if (!db) {
-    db = getFirestore(getFirebaseApp());
+    const app = getFirebaseApp();
+    // `initializeFirestore` ens permet activar ignoreUndefinedProperties,
+    // perquè els camps opcionals (name, comment, groupId…) puguin passar-se
+    // com `undefined` sense que el SDK llenci excepció.
+    try {
+      db = initializeFirestore(app, { ignoreUndefinedProperties: true });
+    } catch {
+      // Si Firestore ja estava inicialitzat (p. ex. HMR de Vite), caiem a getFirestore.
+      db = getFirestore(app);
+    }
     if (import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true") {
       connectFirestoreEmulator(db, "127.0.0.1", 8080);
     }

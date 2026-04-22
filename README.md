@@ -84,6 +84,7 @@ npm run dev
 | `npm run emulators` | Arrenca els emuladors de Firebase. |
 | `npm run deploy:hosting` | Fa build i desplega a Firebase Hosting. |
 | `npm run deploy:rules` | Desplega regles i índexs de Firestore. |
+| `npm run deploy` | Desplega regles + hosting en un sol pas. |
 
 ---
 

@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -21,6 +22,9 @@ function fromDoc(id: string, data: Record<string, unknown>): OlimpiadaEvent {
     format: data.format as OlimpiadaEvent["format"],
     status: data.status as OlimpiadaEvent["status"],
     config: (data.config as OlimpiadaEvent["config"]) ?? {},
+    name: data.name as string | undefined,
+    finalStandings: data.finalStandings as OlimpiadaEvent["finalStandings"],
+    pointsBreakdown: data.pointsBreakdown as OlimpiadaEvent["pointsBreakdown"],
   };
 }
 
@@ -56,5 +60,9 @@ export const eventsRepo = {
     patch: Partial<Omit<OlimpiadaEvent, "id" | "seasonId">>
   ): Promise<void> {
     await updateDoc(doc(getDb(), paths.event(seasonId, eventId)), patch);
+  },
+
+  async remove(seasonId: string, eventId: string): Promise<void> {
+    await deleteDoc(doc(getDb(), paths.event(seasonId, eventId)));
   },
 };

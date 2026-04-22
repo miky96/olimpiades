@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "emulators": "firebase emulators:start",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
-    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes"
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "deploy": "npm run deploy:rules && npm run deploy:hosting"
   },
   "dependencies": {
     "firebase": "^10.13.0",

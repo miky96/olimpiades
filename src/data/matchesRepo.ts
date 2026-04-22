@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDocs,
   setDoc,
@@ -65,6 +66,21 @@ export const matchesRepo = {
     result: { winnerTeamId: string | null; scoreA?: number; scoreB?: number }
   ): Promise<void> {
     await updateDoc(doc(getDb(), paths.match(seasonId, eventId, matchId)), result);
+  },
+
+  async remove(seasonId: string, eventId: string, matchId: string): Promise<void> {
+    await deleteDoc(doc(getDb(), paths.match(seasonId, eventId, matchId)));
+  },
+
+  /** Elimina tots els matches d'un esdeveniment. */
+  async clearAll(seasonId: string, eventId: string): Promise<void> {
+    const snap = await getDocs(collection(getDb(), paths.matches(seasonId, eventId)));
+    const db = getDb();
+    const batch = writeBatch(db);
+    for (const d of snap.docs) {
+      batch.delete(d.ref);
+    }
+    await batch.commit();
   },
 
   async upsert(seasonId: string, eventId: string, match: Match): Promise<void> {

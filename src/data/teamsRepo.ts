@@ -16,6 +16,7 @@ function fromDoc(id: string, data: Record<string, unknown>): Team {
     eventId: data.eventId as string,
     name: data.name as string,
     participantIds: (data.participantIds as string[]) ?? [],
+    groupId: (data.groupId as string | undefined) ?? undefined,
   };
 }
 
