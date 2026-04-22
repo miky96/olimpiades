@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, ErrorMessage } from "@/ui/forms";
 import { eventsRepo, matchesRepo } from "@/data";
 import type { Match, MatchPhase, Team } from "@/domain/types";
@@ -9,6 +9,8 @@ import {
   computeFinalStandings,
   generateFirstRoundBracket,
   groupStandings,
+  nextPowerOfTwo,
+  phaseForRoundsToFinal,
 } from "@/domain";
 import { useSeasons } from "@/features/seasons/SeasonContext";
 import type { EventData } from "../EventDetailPage";
@@ -101,6 +103,46 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
   const canBuildBracketFromGroups =
     editable && hasGroupStage && groupStageComplete && !bracketStarted;
 
+  // Selecció lliure de qualificats: per defecte agafem els top N de cada grup
+  // (segons event.config.qualifiersPerGroup), però l'admin pot afegir/treure
+  // equips manualment. Això permet, per exemple, escollir "1r de cada grup + un
+  // 2n" quan hi ha 3 grups i falta temps per jugar semis+quarts complets.
+  const defaultQualifiers = useMemo(() => {
+    if (!canBuildBracketFromGroups) return [] as string[];
+    return pickQualifiers(
+      teams,
+      groupMatches,
+      event.config.qualifiersPerGroup ?? 2
+    );
+  }, [canBuildBracketFromGroups, teams, groupMatches, event.config.qualifiersPerGroup]);
+
+  const [customQualifiers, setCustomQualifiers] = useState<Set<string> | null>(
+    null
+  );
+  // Si ja no estem en fase de selecció (bracket construït o no aplicable),
+  // netegem la selecció custom per si més tard es reobre.
+  useEffect(() => {
+    if (!canBuildBracketFromGroups) setCustomQualifiers(null);
+  }, [canBuildBracketFromGroups]);
+
+  const selectedQualifiers = customQualifiers ?? new Set(defaultQualifiers);
+
+  function toggleQualifier(teamId: string) {
+    const next = new Set(selectedQualifiers);
+    if (next.has(teamId)) next.delete(teamId);
+    else next.add(teamId);
+    setCustomQualifiers(next);
+  }
+
+  const startPhaseLabel = useMemo(() => {
+    const n = selectedQualifiers.size;
+    if (n < 2) return null;
+    const p = nextPowerOfTwo(n);
+    const totalRounds = Math.log2(p);
+    const phase = phaseForRoundsToFinal(totalRounds - 1);
+    return PHASE_LABELS[phase];
+  }, [selectedQualifiers]);
+
   const allDecided = matches.length > 0 && areAllMatchesDecided(matches);
   const canFinalize =
     editable && allDecided && hasFinalMatch && currentRoundMatches.every((m) => m.winnerTeamId);
@@ -152,7 +194,7 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
     setAdvancing(true);
     setError(null);
     try {
-      const qualifiers = pickQualifiers(teams, groupMatches, event.config.qualifiersPerGroup ?? 2);
+      const qualifiers = [...selectedQualifiers];
       if (qualifiers.length < 2) {
         setError("Calen almenys 2 equips qualificats per construir el bracket.");
         return;
@@ -258,6 +300,9 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
                 editable={editable}
                 busyMatchId={busyMatchId}
                 onSetResult={handleSetWinner}
+                selectionMode={canBuildBracketFromGroups}
+                selectedQualifiers={selectedQualifiers}
+                onToggleQualifier={toggleQualifier}
               />
             ) : (
               <ul className="divide-y divide-slate-100">
@@ -283,9 +328,32 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
       {editable ? (
         <section className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-6">
           {canBuildBracketFromGroups ? (
-            <Button onClick={handleBuildBracketFromGroups} disabled={advancing}>
-              {advancing ? "Generant…" : "Generar bracket amb qualificats"}
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                onClick={handleBuildBracketFromGroups}
+                disabled={advancing || selectedQualifiers.size < 2}
+              >
+                {advancing
+                  ? "Generant…"
+                  : `Generar bracket amb ${selectedQualifiers.size} equip${
+                      selectedQualifiers.size === 1 ? "" : "s"
+                    }`}
+              </Button>
+              {selectedQualifiers.size >= 2 && startPhaseLabel ? (
+                <span className="text-xs text-slate-500">
+                  Comença per <strong>{startPhaseLabel}</strong>
+                  {nextPowerOfTwo(selectedQualifiers.size) !== selectedQualifiers.size
+                    ? ` (${
+                        nextPowerOfTwo(selectedQualifiers.size) - selectedQualifiers.size
+                      } byes)`
+                    : ""}
+                </span>
+              ) : (
+                <span className="text-xs text-slate-500">
+                  Selecciona almenys 2 equips a les classificacions.
+                </span>
+              )}
+            </div>
           ) : null}
           {canAdvanceBracket ? (
             <Button onClick={handleAdvanceBracket} disabled={advancing}>
@@ -389,6 +457,9 @@ function GroupPhaseView({
   editable,
   busyMatchId,
   onSetResult,
+  selectionMode,
+  selectedQualifiers,
+  onToggleQualifier,
 }: {
   matches: Match[];
   teams: Team[];
@@ -400,6 +471,10 @@ function GroupPhaseView({
     winnerTeamId: string | null,
     opts?: { scoreA?: number; scoreB?: number }
   ) => void;
+  /** Si true, mostra una casella per escollir manualment els equips que passen. */
+  selectionMode: boolean;
+  selectedQualifiers: Set<string>;
+  onToggleQualifier: (teamId: string) => void;
 }) {
   // Agrupar per groupId
   const byGroup = new Map<string, Match[]>();
@@ -485,6 +560,11 @@ function GroupPhaseView({
               <table className="w-full text-xs">
                 <thead className="text-slate-500">
                   <tr>
+                    {selectionMode ? (
+                      <th className="w-10 text-center" title="Passa a l'eliminatòria">
+                        Passa
+                      </th>
+                    ) : null}
                     <th className="text-left">Equip</th>
                     <th>PJ</th>
                     <th>G</th>
@@ -496,6 +576,16 @@ function GroupPhaseView({
                 <tbody>
                   {standings.map((s) => (
                     <tr key={s.teamId} className="text-slate-700">
+                      {selectionMode ? (
+                        <td className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedQualifiers.has(s.teamId)}
+                            onChange={() => onToggleQualifier(s.teamId)}
+                            aria-label={`Passa ${teamById.get(s.teamId)?.name ?? s.teamId}`}
+                          />
+                        </td>
+                      ) : null}
                       <td>{teamById.get(s.teamId)?.name ?? s.teamId}</td>
                       <td className="text-center">{s.played}</td>
                       <td className="text-center">{s.wins}</td>
@@ -590,7 +680,7 @@ function FinalSummary({
   );
 }
 
-/** Selecciona els qualificats segons standings de cada grup. */
+/** Selecciona els qualificats per defecte segons standings de cada grup (top N). */
 function pickQualifiers(
   teams: Team[],
   groupMatches: Match[],
