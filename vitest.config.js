@@ -5,6 +5,8 @@ export default defineConfig({
         alias: {
             "@": path.resolve(__dirname, "./src"),
         },
+        // Prefereix fonts TypeScript sobre els .js compilats (stale) del repo.
+        extensions: [".mjs", ".mts", ".ts", ".tsx", ".js", ".jsx", ".json"],
     },
     test: {
         globals: true,

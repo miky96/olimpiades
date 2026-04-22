@@ -73,6 +73,11 @@ export interface Team {
   participantIds: string[];
   /** Només per a format "group_stage_bracket": grup assignat un cop iniciada la competició. */
   groupId?: string;
+  /**
+   * Timestamp (ms) del moment de creació. S'usa per ordenar equips per ordre
+   * d'afegit. Opcional per compatibilitat amb documents antics.
+   */
+  createdAt?: number;
 }
 
 /**

@@ -25,6 +25,15 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
   const [initBusy, setInitBusy] = useState(false);
+  /**
+   * Com es reparteixen els equips a la fase de grups:
+   *  - "order": els N primers afegits al grup A, els següents al B, etc.
+   *  - "random": repartiment aleatori.
+   * Només aplica per a format `group_stage_bracket`.
+   */
+  const [groupAssignment, setGroupAssignment] = useState<"order" | "random">(
+    "order"
+  );
 
   const participantById = useMemo(
     () => new Map(participants.map((p) => [p.id, p])),
@@ -146,6 +155,12 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
         eventId: event.id,
         teamIds: eligibleTeams.map((t) => t.id),
         config: event.config,
+        // Si l'admin escull aleatori i és format amb fase de grups, passem
+        // Math.random com a rng perquè `buildGroups` barregi.
+        rng:
+          event.format === "group_stage_bracket" && groupAssignment === "random"
+            ? Math.random
+            : undefined,
       });
       // Assignem groupId a cada equip quan és group_stage_bracket.
       if (event.format === "group_stage_bracket" && result.groups) {
@@ -285,6 +300,47 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
             Un cop iniciada, es generaran els partits i no podràs modificar els
             equips. Podràs reiniciar-la si cal.
           </p>
+          {event.format === "group_stage_bracket" ? (
+            <fieldset className="mb-4">
+              <legend className="mb-2 text-sm font-medium text-slate-700">
+                Repartiment dels grups
+              </legend>
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="group-assignment"
+                    value="order"
+                    checked={groupAssignment === "order"}
+                    onChange={() => setGroupAssignment("order")}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium">Per ordre d'afegit</span>
+                    <span className="block text-xs text-slate-500">
+                      Els primers equips van al grup A, els següents al B, etc.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="group-assignment"
+                    value="random"
+                    checked={groupAssignment === "random"}
+                    onChange={() => setGroupAssignment("random")}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium">Aleatori</span>
+                    <span className="block text-xs text-slate-500">
+                      Els equips es barregen abans de repartir-se en grups.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+          ) : null}
           {initError ? (
             <div className="mb-3"><ErrorMessage>{initError}</ErrorMessage></div>
           ) : null}

@@ -144,16 +144,21 @@ export function ParticipantsPage() {
             {participants.map((p) => (
               <li
                 key={p.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm"
+                className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-6"
               >
-                <div>
-                  <p className="font-medium text-slate-900">{p.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="truncate font-medium text-slate-900"
+                    title={p.name}
+                  >
+                    {p.name}
+                  </p>
                   {!p.active ? (
                     <span className="text-xs text-slate-500">Inactiu</span>
                   ) : null}
                 </div>
                 {canWrite && !isArchived ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-shrink-0 items-center gap-2">
                     <Button variant="secondary" onClick={() => handleRename(p)}>
                       Reanomenar
                     </Button>

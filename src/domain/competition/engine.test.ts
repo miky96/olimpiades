@@ -141,6 +141,40 @@ describe("group stage", () => {
     expect(() => buildGroups(["a", "b", "c"], 4)).toThrow();
   });
 
+  it("sense rng, manté l'ordre d'entrada (grup A = primers, grup B = següents...)", () => {
+    const input = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8"];
+    const groups = buildGroups(input, 4);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].id).toBe("group_A");
+    expect(groups[0].teamIds).toEqual(["t1", "t2", "t3", "t4"]);
+    expect(groups[1].id).toBe("group_B");
+    expect(groups[1].teamIds).toEqual(["t5", "t6", "t7", "t8"]);
+  });
+
+  it("amb rng, barreja els equips (diferent de l'ordre d'entrada)", () => {
+    const input = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8"];
+    const groups = buildGroups(input, 4, seededRng(1));
+    const flat = groups.flatMap((g) => g.teamIds);
+    // Mateixos elements, ordre diferent.
+    expect(flat.slice().sort()).toEqual(input.slice().sort());
+    expect(flat).not.toEqual(input);
+  });
+
+  it("initCompetition(group_stage_bracket) sense rng conserva l'ordre dels teamIds", () => {
+    idCounter = 0;
+    const teamIds = ["a", "b", "c", "d", "e", "f"];
+    const r = initCompetition("group_stage_bracket", {
+      eventId: "e1",
+      teamIds,
+      config: { groupSize: 3 },
+      makeId,
+    });
+    expect(r.groups).toBeDefined();
+    expect(r.groups!).toHaveLength(2);
+    expect(r.groups![0].teamIds).toEqual(["a", "b", "c"]);
+    expect(r.groups![1].teamIds).toEqual(["d", "e", "f"]);
+  });
+
   it("classificació de grup ordena per punts (3 per victòria, 1 per empat)", () => {
     const group = { id: "A", teamIds: ["a", "b", "c"] };
     const matches = generateRoundRobinMatches(group, "e1", makeId).map((m) => {
