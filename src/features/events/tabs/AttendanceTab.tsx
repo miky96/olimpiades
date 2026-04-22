@@ -179,7 +179,9 @@ export function AttendanceTab({ data, readOnly, onChanged }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-600">
           Marca qui ha vingut i ajusta bonus / penalització. Els valors per defecte
-          s'apliquen segons l'estat seleccionat; pots sobreescriure'ls.
+          s'apliquen segons l'estat seleccionat; pots sobreescriure'ls. Els
+          participants que no estan en cap equip també apareixen i es poden
+          penalitzar (p. ex. no han vingut tot i dir que venien).
         </p>
         {editable ? (
           <Button onClick={saveAllDirty} disabled={dirtyCount === 0}>
@@ -213,7 +215,9 @@ export function AttendanceTab({ data, readOnly, onChanged }: Props) {
                     {row.participant.name}
                   </td>
                   <td className="px-4 py-2 text-xs text-slate-500">
-                    {teamNameOf.get(row.participant.id) ?? "—"}
+                    {teamNameOf.get(row.participant.id) ?? (
+                      <span className="italic text-slate-400">Sense equip</span>
+                    )}
                   </td>
                   <td className="px-4 py-2">
                     <select

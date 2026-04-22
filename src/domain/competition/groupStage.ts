@@ -3,7 +3,10 @@
  *
  * Regles:
  *  - Mida de grup fixa (3 o 4) escollida per l'admin.
- *  - Els equips es reparteixen aleatòriament en grups.
+ *  - Els equips es reparteixen **per ordre d'entrada** (els N primers al grup A,
+ *    els següents al grup B, etc.). Si es proporciona un `rng`, es barreja
+ *    abans de repartir (útil per a tests o si mai volem re-introduir
+ *    l'aleatorietat via UI).
  *  - Dins de cada grup es juga round-robin (tots contra tots).
  *  - Els N primers de cada grup passen a la fase d'eliminatòria.
  *  - Si el nombre d'equips no és múltiple de groupSize, la resta forma l'últim
@@ -31,7 +34,12 @@ const defaultMakeId = () => `match_${Date.now().toString(36)}_${(counter++).toSt
 
 export const MIN_TEAMS_FOR_GROUP_STAGE = 4;
 
-/** Reparteix equips en grups de mida `groupSize`. */
+/**
+ * Reparteix equips en grups de mida `groupSize`.
+ *
+ * Per defecte manté l'ordre d'entrada dels equips (els N primers al grup A,
+ * els següents al grup B, etc.). Si es passa `rng`, es barreja abans.
+ */
 export function buildGroups(
   teamIds: string[],
   groupSize: 3 | 4,
@@ -42,7 +50,7 @@ export function buildGroups(
       `El format "lligueta + bracket" requereix almenys ${MIN_TEAMS_FOR_GROUP_STAGE} equips.`
     );
   }
-  const shuffled = shuffle(teamIds, rng);
+  const shuffled = rng ? shuffle(teamIds, rng) : [...teamIds];
   const groups: Group[] = [];
   let groupIndex = 0;
   for (let i = 0; i < shuffled.length; i += groupSize) {

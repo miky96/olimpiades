@@ -19,7 +19,7 @@ export function buildGroups(teamIds, groupSize, rng) {
     if (teamIds.length < MIN_TEAMS_FOR_GROUP_STAGE) {
         throw new Error(`El format "lligueta + bracket" requereix almenys ${MIN_TEAMS_FOR_GROUP_STAGE} equips.`);
     }
-    const shuffled = shuffle(teamIds, rng);
+    const shuffled = rng ? shuffle(teamIds, rng) : [...teamIds];
     const groups = [];
     let groupIndex = 0;
     for (let i = 0; i < shuffled.length; i += groupSize) {
