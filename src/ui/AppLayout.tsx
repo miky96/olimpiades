@@ -38,7 +38,7 @@ export function AppLayout() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link to="/" className="text-lg font-semibold">
-            Olimpíades
+            Olimpiades
           </Link>
 
           <div className="flex items-center gap-3 text-sm">

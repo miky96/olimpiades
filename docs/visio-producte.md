@@ -1,7 +1,7 @@
 # Visió del producte
 
 ## Context actual
-- Tenim un esdeveniment bisetmanal anomenat "Olimpíades".
+- Tenim un esdeveniment bisetmanal anomenat "Olimpiades".
 - Cada dia es un esport diferent amb equips que van de 1 persona a infinites per equip segons els esports.
 - Un cop a l'any es decideixen quins esdeveniments es faran i es pot coneixer els esports abans del dia.
 - Actualment l’assistència es comunica principalment per WhatsApp.

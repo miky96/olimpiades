@@ -1,6 +1,6 @@
-# Olimpíades
+# Olimpiades
 
-Web app per gestionar les **Olimpíades**: un esdeveniment esportiu bisetmanal amb diferents esports, equips, assistència, resultats i classificació general per temporades.
+Web app per gestionar les **Olimpiades**: un esdeveniment esportiu bisetmanal amb diferents esports, equips, assistència, resultats i classificació general per temporades.
 
 Substitueix el flux manual actual (WhatsApp + Excel) per una eina centralitzada, simple i responsive (mòbil, tablet i desktop).
 
