@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import type { Role } from "@/domain/types";
-import { hasRole, useAuth } from "./AuthContext";
+import { hasRole, useAuth } from "./useAuth";
 
 interface ProtectedRouteProps {
   /** Rols autoritzats. Per defecte: admin i superadmin. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasRole } from "./AuthContext";
+import { hasRole } from "./useAuth";
 import type { AppUser } from "@/domain/types";
 
 const admin: AppUser = { uid: "1", email: "a@a", role: "admin", status: "active" };

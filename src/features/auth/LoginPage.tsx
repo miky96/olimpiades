@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/ui/PageHeader";
 import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "./useAuth";
 
 export function LoginPage() {
   const { signIn, firebaseUser, appUser, loading, error } = useAuth();

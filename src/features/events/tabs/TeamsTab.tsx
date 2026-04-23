@@ -3,7 +3,7 @@ import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
 import { matchesRepo, teamsRepo, eventsRepo } from "@/data";
 import type { Participant, Team } from "@/domain/types";
 import { competition } from "@/domain";
-import { useSeasons } from "@/features/seasons/SeasonContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
 
 interface Props {

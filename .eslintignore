@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+coverage
+.firebase
+*.min.js
+
+# Artefactes de build TS (declaracions generades)
+vite.config.d.ts
+vitest.config.d.ts
+vite.config.js
+vitest.config.js
+**/*.tsbuildinfo

@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -9,23 +7,7 @@ import {
 } from "react";
 import { seasonsRepo } from "@/data";
 import type { Season } from "@/domain/types";
-
-export interface SeasonState {
-  /** Totes les temporades conegudes (actives + arxivades). */
-  seasons: Season[];
-  /** Temporada actualment seleccionada per navegar (per defecte l'activa). */
-  currentSeason: Season | null;
-  /** True mentre s'està carregant la primera llista. */
-  loading: boolean;
-  /** Error en la càrrega inicial. */
-  error: string | null;
-  /** Selecciona una temporada per navegar (històrica o activa). */
-  selectSeason(seasonId: string): void;
-  /** Recarrega la llista des de Firestore. */
-  refresh(): Promise<void>;
-}
-
-const SeasonContext = createContext<SeasonState | undefined>(undefined);
+import { SeasonContext, type SeasonState } from "./season-context";
 
 export function SeasonProvider({ children }: { children: ReactNode }) {
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -70,12 +52,4 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
   );
 
   return <SeasonContext.Provider value={value}>{children}</SeasonContext.Provider>;
-}
-
-export function useSeasons(): SeasonState {
-  const ctx = useContext(SeasonContext);
-  if (!ctx) {
-    throw new Error("useSeasons s'ha de cridar dins d'un <SeasonProvider>");
-  }
-  return ctx;
 }

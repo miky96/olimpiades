@@ -1,0 +1,28 @@
+# Normalitza line endings automàticament.
+# Tot el codi font es guarda amb LF al repo; el checkout local pot ser LF o CRLF
+# segons la config de Git de cada desenvolupador (core.autocrlf).
+* text=auto eol=lf
+
+# Scripts específics de Windows han de mantenir CRLF
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Scripts de Unix sempre amb LF
+*.sh   text eol=lf
+
+# Fitxers binaris: que Git no intenti convertir res
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.eot  binary
+*.zip  binary
+*.gz   binary
