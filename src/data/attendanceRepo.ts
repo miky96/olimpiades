@@ -1,6 +1,7 @@
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import type { AttendanceRecord } from "@/domain/types";
+import type { AttendanceRecord, Participant } from "@/domain/types";
+import { computeMissingAttendanceDefaults } from "@/domain/attendance";
 import { paths } from "./collections";
 
 function fromDoc(id: string, data: Record<string, unknown>): AttendanceRecord {
@@ -42,5 +43,43 @@ export const attendanceRepo = {
         ...record,
       }
     );
+  },
+
+  /**
+   * Persisteix registres d'assistència per defecte (Present · +5) per a tots
+   * els participants elegibles que encara no en tinguin. La lògica d'elegibilitat
+   * i dels valors per defecte viu al mòdul de domini
+   * (`computeMissingAttendanceDefaults`); aquí només orquestrem la persistència.
+   *
+   * Casos d'ús: garantir un estat consistent abans de finalitzar un esdeveniment
+   * (la UI mostra els defaults, però si l'admin no edita res no es desa res i
+   * el càlcul de punts quedaria desajustat). Reutilitzable per altres fluxos
+   * futurs (p. ex. "marcar tothom com a present" manual).
+   *
+   * Retorna la llista completa d'assistència (existent + nous per defecte).
+   */
+  async ensureDefaults(
+    seasonId: string,
+    eventId: string,
+    params: { participants: Participant[]; existing: AttendanceRecord[] }
+  ): Promise<AttendanceRecord[]> {
+    const { participants, existing } = params;
+    const missing = computeMissingAttendanceDefaults({
+      eventId,
+      participants,
+      existing,
+    });
+    if (missing.length === 0) return existing;
+    await Promise.all(
+      missing.map((r) =>
+        attendanceRepo.upsert(seasonId, eventId, {
+          participantId: r.participantId,
+          status: r.status,
+          bonusPoints: r.bonusPoints,
+          penaltyPoints: r.penaltyPoints,
+        })
+      )
+    );
+    return [...existing, ...missing];
   },
 };
