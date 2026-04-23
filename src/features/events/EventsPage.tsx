@@ -5,8 +5,8 @@ import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
 import { eventsRepo } from "@/data";
 import type { EventFormat, OlimpiadaEvent } from "@/domain/types";
 import { formatLabels } from "@/domain/formatLabels";
-import { useSeasons } from "@/features/seasons/SeasonContext";
-import { useAuth, hasRole } from "@/features/auth/AuthContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
+import { useAuth, hasRole } from "@/features/auth/useAuth";
 
 const FORMATS: EventFormat[] = ["single_match", "bracket", "group_stage_bracket"];
 

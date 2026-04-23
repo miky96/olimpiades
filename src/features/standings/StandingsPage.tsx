@@ -3,7 +3,7 @@ import { PageHeader } from "@/ui/PageHeader";
 import { ErrorMessage } from "@/ui/forms";
 import { eventsRepo, participantsRepo } from "@/data";
 import type { OlimpiadaEvent, Participant } from "@/domain/types";
-import { useSeasons } from "@/features/seasons/SeasonContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
 
 interface Row {
   participantId: string;

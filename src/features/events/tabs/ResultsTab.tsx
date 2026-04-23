@@ -12,7 +12,7 @@ import {
   nextPowerOfTwo,
   phaseForRoundsToFinal,
 } from "@/domain";
-import { useSeasons } from "@/features/seasons/SeasonContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
 
 interface Props {
@@ -95,8 +95,13 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
     currentRoundComplete &&
     !hasFinalMatch;
 
-  // Fase de grups: detectem si tots els matches de group són decidits
-  const groupMatches = matchesByPhase.get("group") ?? [];
+  // Fase de grups: detectem si tots els matches de group són decidits.
+  // Envoltat en useMemo per estabilitzar la referència (alimenta useMemo
+  // de defaultQualifiers més avall).
+  const groupMatches = useMemo(
+    () => matchesByPhase.get("group") ?? [],
+    [matchesByPhase]
+  );
   const hasGroupStage = groupMatches.length > 0;
   const groupStageComplete = hasGroupStage && areAllMatchesDecided(groupMatches);
   const bracketStarted = matches.some((m) => m.phase !== "group");
@@ -125,7 +130,12 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
     if (!canBuildBracketFromGroups) setCustomQualifiers(null);
   }, [canBuildBracketFromGroups]);
 
-  const selectedQualifiers = customQualifiers ?? new Set(defaultQualifiers);
+  // Envoltat en useMemo perquè `new Set(...)` genera una referència nova
+  // a cada render i desestabilitzava `startPhaseLabel`.
+  const selectedQualifiers = useMemo(
+    () => customQualifiers ?? new Set(defaultQualifiers),
+    [customQualifiers, defaultQualifiers]
+  );
 
   function toggleQualifier(teamId: string) {
     const next = new Set(selectedQualifiers);

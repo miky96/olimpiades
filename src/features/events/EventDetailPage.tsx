@@ -17,8 +17,8 @@ import type {
   Team,
 } from "@/domain/types";
 import { formatLabels } from "@/domain/formatLabels";
-import { useSeasons } from "@/features/seasons/SeasonContext";
-import { useAuth, hasRole } from "@/features/auth/AuthContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
+import { useAuth, hasRole } from "@/features/auth/useAuth";
 import { TeamsTab } from "./tabs/TeamsTab";
 import { AttendanceTab } from "./tabs/AttendanceTab";
 import { ResultsTab } from "./tabs/ResultsTab";

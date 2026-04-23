@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { hasRole, useAuth } from "@/features/auth/AuthContext";
-import { useSeasons } from "@/features/seasons/SeasonContext";
+import { hasRole, useAuth } from "@/features/auth/useAuth";
+import { useSeasons } from "@/features/seasons/useSeasons";
 import { Button } from "@/ui/forms";
 import type { Role } from "@/domain/types";
 
