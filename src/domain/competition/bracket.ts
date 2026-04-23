@@ -107,6 +107,11 @@ export function generateFirstRoundBracket(
 /**
  * Genera la següent ronda a partir dels guanyadors de la ronda actual.
  * Retorna array buit si encara no tenim tots els guanyadors o si ja s'ha acabat.
+ *
+ * Cas especial: quan s'avança des de les semifinals cap a la final, també
+ * es genera el partit de tercer lloc (`third_place`) amb els dos perdedors
+ * de les semis. Aquest partit només es crea si tots dos semifinalistes han
+ * jugat el partit (sense byes), ja que si no no hi ha dos perdedors reals.
  */
 export function advanceBracket(
   currentRoundMatches: Match[],
@@ -136,5 +141,29 @@ export function advanceBracket(
       winnerTeamId: null,
     });
   }
+
+  // Si la ronda següent és la final (2 guanyadors), afegim la "final dels
+  // perdedors" que decideix el 3r i 4t lloc amb els dos perdedors de la semi.
+  if (phase === "final" && winners.length === 2) {
+    const losers: string[] = [];
+    for (const m of currentRoundMatches) {
+      if (m.teamBId === null) continue; // bye: no hi ha perdedor real
+      const loser =
+        m.teamAId === m.winnerTeamId ? m.teamBId : m.teamAId;
+      if (loser) losers.push(loser);
+    }
+    if (losers.length === 2) {
+      matches.push({
+        id: makeId(),
+        eventId,
+        phase: "third_place",
+        round: nextRound,
+        teamAId: losers[0],
+        teamBId: losers[1],
+        winnerTeamId: null,
+      });
+    }
+  }
+
   return matches;
 }

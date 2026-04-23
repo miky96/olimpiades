@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { PageHeader } from "@/ui/PageHeader";
 import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
 import { seasonsRepo } from "@/data";
-import { useSeasons } from "./SeasonContext";
+import { useSeasons } from "./useSeasons";
 
 export function SeasonsPage() {
   const { seasons, currentSeason, loading, error, refresh, selectSeason } =

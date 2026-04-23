@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Match } from "./types";
 import {
   areAllMatchesDecided,
-  bracketReachScore,
+  computeBracketTier,
   computeFinalStandings,
 } from "./finalStandings";
 
@@ -21,28 +21,53 @@ function m(partial: Partial<Match>): Match {
   };
 }
 
-describe("bracketReachScore", () => {
-  it("champion reaches final round", () => {
+describe("computeBracketTier", () => {
+  it("sense partit de 3r: campió, subcampió i semifinalistes sense tier", () => {
     const matches: Match[] = [
       m({ id: "1", phase: "semi", round: 1, teamAId: "A", teamBId: "B", winnerTeamId: "A" }),
       m({ id: "2", phase: "semi", round: 1, teamAId: "C", teamBId: "D", winnerTeamId: "C" }),
       m({ id: "3", phase: "final", round: 2, teamAId: "A", teamBId: "C", winnerTeamId: "A" }),
     ];
-    expect(bracketReachScore("A", matches)).toBe(2);
-    expect(bracketReachScore("C", matches)).toBe(1);
-    expect(bracketReachScore("B", matches)).toBe(0);
-    expect(bracketReachScore("D", matches)).toBe(0);
+    expect(computeBracketTier("A", matches)).toEqual({ kind: "final_winner" });
+    expect(computeBracketTier("C", matches)).toEqual({ kind: "final_loser" });
+    expect(computeBracketTier("B", matches)).toEqual({ kind: "none" });
+    expect(computeBracketTier("D", matches)).toEqual({ kind: "none" });
   });
 
-  it("single_match: winner has score 1, loser 0", () => {
+  it("amb partit de 3r lloc: cada equip rep el tier corresponent", () => {
+    const matches: Match[] = [
+      m({ id: "1", phase: "semi", round: 1, teamAId: "A", teamBId: "B", winnerTeamId: "A" }),
+      m({ id: "2", phase: "semi", round: 1, teamAId: "C", teamBId: "D", winnerTeamId: "C" }),
+      m({ id: "3", phase: "final", round: 2, teamAId: "A", teamBId: "C", winnerTeamId: "A" }),
+      m({ id: "4", phase: "third_place", round: 2, teamAId: "B", teamBId: "D", winnerTeamId: "B" }),
+    ];
+    expect(computeBracketTier("A", matches)).toEqual({ kind: "final_winner" });
+    expect(computeBracketTier("C", matches)).toEqual({ kind: "final_loser" });
+    expect(computeBracketTier("B", matches)).toEqual({ kind: "third_place_winner" });
+    expect(computeBracketTier("D", matches)).toEqual({ kind: "third_place_loser" });
+  });
+
+  it("single_match: guanyador -> final_winner, perdedor -> final_loser", () => {
     const matches: Match[] = [
       m({ id: "1", phase: "single", teamAId: "X", teamBId: "Y", winnerTeamId: "Y" }),
     ];
-    expect(bracketReachScore("Y", matches)).toBe(1);
-    expect(bracketReachScore("X", matches)).toBe(0);
+    expect(computeBracketTier("Y", matches)).toEqual({ kind: "final_winner" });
+    expect(computeBracketTier("X", matches)).toEqual({ kind: "final_loser" });
   });
 
-  it("group phase does not count for bracket reach", () => {
+  it("equip eliminat a quarts rep reached_round amb la ronda on va guanyar", () => {
+    const matches: Match[] = [
+      m({ id: "1", phase: "quarter", round: 1, teamAId: "A", teamBId: "B", winnerTeamId: "A" }),
+      m({ id: "2", phase: "semi", round: 2, teamAId: "A", teamBId: "C", winnerTeamId: "C" }),
+    ];
+    expect(computeBracketTier("A", matches)).toEqual({
+      kind: "reached_round",
+      round: 1,
+    });
+    expect(computeBracketTier("B", matches)).toEqual({ kind: "none" });
+  });
+
+  it("la fase de grups no afecta el tier", () => {
     const matches: Match[] = [
       m({
         id: "1",
@@ -53,25 +78,40 @@ describe("bracketReachScore", () => {
         winnerTeamId: "A",
       }),
     ];
-    expect(bracketReachScore("A", matches)).toBe(0);
+    expect(computeBracketTier("A", matches)).toEqual({ kind: "none" });
   });
 });
 
 describe("computeFinalStandings", () => {
-  it("bracket with 4 teams produces 1/2/3/3 dense positions", () => {
+  it("bracket 4 equips sense partit de 3r: els dos semifinalistes queden empatats a la 3a posició", () => {
     const matches: Match[] = [
       m({ id: "1", phase: "semi", round: 1, teamAId: "A", teamBId: "B", winnerTeamId: "A" }),
       m({ id: "2", phase: "semi", round: 1, teamAId: "C", teamBId: "D", winnerTeamId: "C" }),
       m({ id: "3", phase: "final", round: 2, teamAId: "A", teamBId: "C", winnerTeamId: "A" }),
     ];
     const standings = computeFinalStandings(["A", "B", "C", "D"], matches);
-    // A=pos1, C=pos2, B & D=pos3 (tied)
     expect(standings[0].position).toBe(1);
     expect(standings[0].teamIds).toEqual(["A"]);
     expect(standings[1].position).toBe(2);
     expect(standings[1].teamIds).toEqual(["C"]);
     expect(standings[2].position).toBe(3);
     expect(standings[2].teamIds.sort()).toEqual(["B", "D"]);
+  });
+
+  it("bracket 4 equips amb partit de 3r: 1r / 2n / 3r / 4t queden separats", () => {
+    const matches: Match[] = [
+      m({ id: "1", phase: "semi", round: 1, teamAId: "A", teamBId: "B", winnerTeamId: "A" }),
+      m({ id: "2", phase: "semi", round: 1, teamAId: "C", teamBId: "D", winnerTeamId: "C" }),
+      m({ id: "3", phase: "final", round: 2, teamAId: "A", teamBId: "C", winnerTeamId: "A" }),
+      m({ id: "4", phase: "third_place", round: 2, teamAId: "B", teamBId: "D", winnerTeamId: "B" }),
+    ];
+    const standings = computeFinalStandings(["A", "B", "C", "D"], matches);
+    expect(standings).toEqual([
+      { position: 1, teamIds: ["A"] },
+      { position: 2, teamIds: ["C"] },
+      { position: 3, teamIds: ["B"] },
+      { position: 4, teamIds: ["D"] },
+    ]);
   });
 
   it("single match: winner pos 1, loser pos 2", () => {

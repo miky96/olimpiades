@@ -3,7 +3,7 @@ import { Button, ErrorMessage, Input } from "@/ui/forms";
 import { attendanceRepo } from "@/data";
 import type { AttendanceStatus, Participant } from "@/domain/types";
 import { attendanceLabels, defaultsFor } from "@/domain/attendanceDefaults";
-import { useSeasons } from "@/features/seasons/SeasonContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
 
 interface Props {

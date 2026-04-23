@@ -1,29 +1,107 @@
 /**
  * Càlcul de posicions finals d'un esdeveniment a partir dels matches.
  *
- * Regla simple (adequada per a l'MVP):
- *  - Per a bracket / group_stage_bracket, la "puntuació" de cada equip és
- *    la ronda més alta on va guanyar (o rebre un bye amb winner prefixat).
- *  - Per a single_match, el guanyador rep score=1 i el perdedor 0.
- *  - Els equips que no van passar la fase de grups tenen score=0 (posició final
- *    més baixa), que equival a 0 punts segons les regles de l'MVP. L'ordre
- *    relatiu entre ells no afecta els punts, així que ho deixem com un sol bucket.
- *  - Els empats es resolen amb posicions denses (1,1,2,...).
+ * El model fa servir un tipus explícit `BracketTier` per classificar a quin
+ * "nivell" ha arribat cada equip (campió, subcampió, 3r, 4t, o simplement
+ * "ha arribat fins a la ronda N"). Això manté la lògica del càlcul
+ * autodescriptiva i permet afegir nous tiers (p. ex. partit de 5è/6è)
+ * sense haver de fer mans i mànigues amb constants numèriques màgiques.
+ *
+ * Per a l'assignació de posicions fem servir un score numèric intern
+ * (`tierScore`) que només serveix per ordenar tiers; la lògica de negoci
+ * treballa sempre amb tiers.
  */
 
 import type { FinalStanding, Match } from "./types";
 import { assignDensePositions } from "./positions";
 
-/** Calcula la "profunditat" que ha assolit un equip a la fase eliminatòria. */
-export function bracketReachScore(teamId: string, matches: Match[]): number {
-  let reach = 0;
+/**
+ * Nivell assolit per un equip a la fase eliminatòria.
+ *
+ * Ordre (millor -> pitjor):
+ *   final_winner > final_loser > third_place_winner > third_place_loser >
+ *   reached_round(r) (r més gran = millor) > none
+ */
+export type BracketTier =
+  | { kind: "none" }
+  | { kind: "reached_round"; round: number }
+  | { kind: "third_place_loser" }
+  | { kind: "third_place_winner" }
+  | { kind: "final_loser" }
+  | { kind: "final_winner" };
+
+// Base numèrica per als tiers "especials". Prou gran per garantir que sempre
+// queden per sobre de qualsevol `round` realista (log2(N) amb N <= 64 => r <= 6).
+const TIER_BASE = 1_000;
+
+const TIER_SCORE = {
+  final_winner: TIER_BASE + 4,
+  final_loser: TIER_BASE + 3,
+  third_place_winner: TIER_BASE + 2,
+  third_place_loser: TIER_BASE + 1,
+} as const;
+
+/**
+ * Converteix un tier a un score numèric per a l'ordenació.
+ * Implementació interna: no forma part del contracte públic del mòdul.
+ */
+function tierScore(tier: BracketTier): number {
+  switch (tier.kind) {
+    case "none":
+      return 0;
+    case "reached_round":
+      return tier.round;
+    case "third_place_loser":
+      return TIER_SCORE.third_place_loser;
+    case "third_place_winner":
+      return TIER_SCORE.third_place_winner;
+    case "final_loser":
+      return TIER_SCORE.final_loser;
+    case "final_winner":
+      return TIER_SCORE.final_winner;
+  }
+}
+
+/**
+ * Determina el millor tier assolit per un equip donat l'historial de matches.
+ *
+ * - Final (o partit únic): guanyador -> final_winner; perdedor -> final_loser.
+ * - Partit de 3r: guanyador -> third_place_winner; perdedor -> third_place_loser.
+ * - Altres rondes eliminatòries: si guanya, reached_round(round).
+ * - Fase de grups: no compta (no afecta el tier).
+ */
+export function computeBracketTier(teamId: string, matches: Match[]): BracketTier {
+  let best: BracketTier = { kind: "none" };
+
+  const consider = (candidate: BracketTier) => {
+    if (tierScore(candidate) > tierScore(best)) {
+      best = candidate;
+    }
+  };
+
   for (const m of matches) {
     if (m.phase === "group") continue;
-    if (m.winnerTeamId !== teamId) continue;
-    const r = m.phase === "single" ? 1 : m.round ?? 0;
-    if (r > reach) reach = r;
+
+    const participated = m.teamAId === teamId || m.teamBId === teamId;
+    const won = m.winnerTeamId === teamId;
+
+    if (m.phase === "final" || m.phase === "single") {
+      if (won) consider({ kind: "final_winner" });
+      else if (participated && m.winnerTeamId != null) consider({ kind: "final_loser" });
+      continue;
+    }
+
+    if (m.phase === "third_place") {
+      if (won) consider({ kind: "third_place_winner" });
+      else if (participated && m.winnerTeamId != null) consider({ kind: "third_place_loser" });
+      continue;
+    }
+
+    // Rondes eliminatòries anteriors (quarts, vuitens, etc.).
+    if (won) consider({ kind: "reached_round", round: m.round ?? 0 });
   }
-  return reach;
+
+  return best;
 }
 
 /**
@@ -36,7 +114,7 @@ export function computeFinalStandings(
 ): FinalStanding[] {
   const inputs = teamIds.map((teamId) => ({
     teamId,
-    score: bracketReachScore(teamId, matches),
+    score: tierScore(computeBracketTier(teamId, matches)),
   }));
   return assignDensePositions(inputs);
 }

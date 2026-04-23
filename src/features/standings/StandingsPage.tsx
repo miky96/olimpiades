@@ -3,7 +3,7 @@ import { PageHeader } from "@/ui/PageHeader";
 import { ErrorMessage } from "@/ui/forms";
 import { eventsRepo, participantsRepo } from "@/data";
 import type { OlimpiadaEvent, Participant } from "@/domain/types";
-import { useSeasons } from "@/features/seasons/SeasonContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
 
 interface Row {
   participantId: string;
@@ -113,12 +113,12 @@ export function StandingsPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs font-medium text-slate-600">
               <tr>
-                <th className="px-4 py-2">#</th>
+                <th className="px-4 py-2">Posició</th>
                 <th className="px-4 py-2">Participant</th>
                 <th className="px-4 py-2 text-right">Esdeveniments</th>
-                <th className="px-4 py-2 text-right">Posició</th>
-                <th className="px-4 py-2 text-right">Bonus</th>
-                <th className="px-4 py-2 text-right">Penal.</th>
+                <th className="px-4 py-2 text-right">Puntuació esdeveniments</th>
+                <th className="px-4 py-2 text-right">Bonus assistència</th>
+                <th className="px-4 py-2 text-right">Penalitzacions</th>
                 <th className="px-4 py-2 text-right">Total</th>
               </tr>
             </thead>

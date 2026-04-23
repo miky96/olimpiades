@@ -77,7 +77,7 @@ describe("initCompetition bracket", () => {
 });
 
 describe("advanceBracket", () => {
-  it("genera la següent ronda quan tots els matches tenen guanyador", () => {
+  it("genera la final i el partit de 3r lloc quan tots els matches tenen guanyador", () => {
     idCounter = 0;
     const r = initCompetition("bracket", {
       eventId: "e1",
@@ -90,8 +90,63 @@ describe("advanceBracket", () => {
       winnerTeamId: m.teamAId,
     }));
     const next = advanceBracket(withWinners, { eventId: "e1", makeId });
+    expect(next).toHaveLength(2);
+
+    const finalMatch = next.find((m) => m.phase === "final");
+    const thirdMatch = next.find((m) => m.phase === "third_place");
+    expect(finalMatch).toBeDefined();
+    expect(thirdMatch).toBeDefined();
+
+    // La final enfronta els dos guanyadors de la semi.
+    const semiWinners = withWinners.map((m) => m.winnerTeamId).sort();
+    expect([finalMatch!.teamAId, finalMatch!.teamBId].sort()).toEqual(
+      semiWinners
+    );
+
+    // El third_place enfronta els dos perdedors de la semi.
+    const semiLosers = withWinners
+      .map((m) => (m.winnerTeamId === m.teamAId ? m.teamBId : m.teamAId))
+      .sort();
+    expect([thirdMatch!.teamAId, thirdMatch!.teamBId].sort()).toEqual(
+      semiLosers
+    );
+    expect(thirdMatch!.round).toBe(finalMatch!.round);
+  });
+
+  it("amb 3 equips (un bye a la semi) no crea third_place perquè només hi ha un perdedor real", () => {
+    idCounter = 0;
+    const r = initCompetition("bracket", {
+      eventId: "e1",
+      teamIds: ["a", "b", "c"],
+      rng: seededRng(42),
+      makeId,
+    });
+    const withWinners = r.matches.map((m) => ({
+      ...m,
+      winnerTeamId: m.winnerTeamId ?? m.teamAId,
+    }));
+    const next = advanceBracket(withWinners, { eventId: "e1", makeId });
     expect(next).toHaveLength(1);
     expect(next[0].phase).toBe("final");
+  });
+
+  it("en fases anteriors (quarts → semis) no genera third_place", () => {
+    idCounter = 0;
+    const r = initCompetition("bracket", {
+      eventId: "e1",
+      teamIds: ["a", "b", "c", "d", "e", "f", "g", "h"],
+      rng: seededRng(42),
+      makeId,
+    });
+    const withWinners = r.matches.map((m) => ({
+      ...m,
+      winnerTeamId: m.winnerTeamId ?? m.teamAId,
+    }));
+    const next = advanceBracket(withWinners, { eventId: "e1", makeId });
+    expect(next).toHaveLength(2);
+    for (const m of next) {
+      expect(m.phase).toBe("semi");
+    }
   });
 
   it("retorna buit si encara falten resultats", () => {

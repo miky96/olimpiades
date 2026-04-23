@@ -3,8 +3,8 @@ import { PageHeader } from "@/ui/PageHeader";
 import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
 import { participantsRepo } from "@/data";
 import type { Participant } from "@/domain/types";
-import { useSeasons } from "@/features/seasons/SeasonContext";
-import { useAuth, hasRole } from "@/features/auth/AuthContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
+import { useAuth, hasRole } from "@/features/auth/useAuth";
 
 export function ParticipantsPage() {
   const { currentSeason } = useSeasons();

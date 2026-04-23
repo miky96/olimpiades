@@ -17,8 +17,8 @@ import type {
   Team,
 } from "@/domain/types";
 import { formatLabels } from "@/domain/formatLabels";
-import { useSeasons } from "@/features/seasons/SeasonContext";
-import { useAuth, hasRole } from "@/features/auth/AuthContext";
+import { useSeasons } from "@/features/seasons/useSeasons";
+import { useAuth, hasRole } from "@/features/auth/useAuth";
 import { TeamsTab } from "./tabs/TeamsTab";
 import { AttendanceTab } from "./tabs/AttendanceTab";
 import { ResultsTab } from "./tabs/ResultsTab";
@@ -50,7 +50,13 @@ export function EventDetailPage() {
 
   const load = useCallback(async () => {
     if (!seasonId || !eventId) return;
-    setLoading(true);
+    // Només mostrem el placeholder de "Carregant…" a la càrrega inicial.
+    // Als refrescs posteriors mantenim la UI visible per no perdre el scroll ni
+    // fer saltar la pantalla cada cop que l'admin desa un resultat.
+    setData((prev) => {
+      if (prev === null) setLoading(true);
+      return prev;
+    });
     setError(null);
     try {
       const [event, teams, participants, matches, attendance] = await Promise.all([
@@ -89,7 +95,7 @@ export function EventDetailPage() {
     );
   }
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div>
         <PageHeader title="Esdeveniment" />
@@ -100,7 +106,7 @@ export function EventDetailPage() {
     );
   }
 
-  if (error || !data) {
+  if (!data) {
     return (
       <div className="space-y-4">
         <PageHeader title="Esdeveniment" />
@@ -128,6 +134,8 @@ export function EventDetailPage() {
           description={`${event.date} · ${formatLabels[event.format]} · ${statusLabel(event.status)}`}
         />
       </div>
+
+      {error ? <ErrorMessage>{error}</ErrorMessage> : null}
 
       <div className="flex gap-1 border-b border-slate-200">
         <TabButton active={tab === "teams"} onClick={() => setTab("teams")}>
