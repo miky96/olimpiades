@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, ErrorMessage } from "@/ui/forms";
-import { eventsRepo, matchesRepo } from "@/data";
+import { attendanceRepo, eventsRepo, matchesRepo } from "@/data";
 import type { Match, MatchPhase, Team } from "@/domain/types";
 import {
   advanceBracket,
@@ -43,7 +43,7 @@ const PHASE_LABELS: Record<MatchPhase, string> = {
 
 export function ResultsTab({ data, readOnly, onChanged }: Props) {
   const { currentSeason } = useSeasons();
-  const { event, matches, teams, attendance } = data;
+  const { event, matches, teams, attendance, participants } = data;
   const seasonId = currentSeason?.id ?? "";
   const editable = !readOnly && event.status === "in_progress";
 
@@ -233,12 +233,24 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
     setFinalizing(true);
     setError(null);
     try {
+      // La pestanya d'Assistència mostra "Present · +5" com a estat per defecte.
+      // Si l'admin no ha editat cap fila, no s'ha desat res a Firestore i el
+      // desglossament de punts acabaria amb bonus 0 per aquests participants.
+      // Abans de calcular els punts, persistim un registre d'assistència amb
+      // els valors per defecte per a cada participant elegible que encara no
+      // en tingui un (lògica al mòdul de domini + orquestració al repo).
+      const fullAttendance = await attendanceRepo.ensureDefaults(
+        seasonId,
+        event.id,
+        { participants, existing: attendance }
+      );
+
       const standings = computeFinalStandings(
         teams.map((t) => t.id),
         matches
       );
       const attendanceByParticipant = Object.fromEntries(
-        attendance.map((a) => [a.participantId, a])
+        fullAttendance.map((a) => [a.participantId, a])
       );
       const breakdown = calculateEventPoints(
         standings,

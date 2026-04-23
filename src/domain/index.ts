@@ -3,6 +3,7 @@ export * from "./scoring";
 export * from "./positions";
 export * from "./finalStandings";
 export * from "./attendanceDefaults";
+export * from "./attendance";
 export * from "./formatLabels";
 export * as competition from "./competition/engine";
 export * from "./competition/bracket";
