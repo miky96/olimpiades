@@ -168,7 +168,6 @@ function Podium({ rows }: { rows: Row[] }) {
               <span className="text-3xl font-bold text-brand-600 dark:text-brand-400">
                 {r.total}
               </span>
-              <span className="text-xs muted">{r.events} esdev.</span>
             </div>
           </div>
         ))}
