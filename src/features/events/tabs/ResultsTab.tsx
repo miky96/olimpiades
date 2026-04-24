@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, ErrorMessage } from "@/ui/forms";
+import { Badge, Button, ErrorMessage } from "@/ui/forms";
 import { attendanceRepo, eventsRepo, matchesRepo } from "@/data";
 import type { Match, MatchPhase, Team } from "@/domain/types";
 import {
@@ -66,7 +66,6 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
     return groups;
   }, [matches]);
 
-  // Bracket: ronda actual = màxima ronda present, excloent group phase.
   const currentBracketRound = useMemo(() => {
     let max = 0;
     for (const m of matches) {
@@ -85,19 +84,17 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
   );
 
   const currentRoundComplete =
-    currentRoundMatches.length > 0 &&
-    areAllMatchesDecided(currentRoundMatches);
+    currentRoundMatches.length > 0 && areAllMatchesDecided(currentRoundMatches);
 
-  const hasFinalMatch = currentRoundMatches.some((m) => m.phase === "final" || m.phase === "single");
+  const hasFinalMatch = currentRoundMatches.some(
+    (m) => m.phase === "final" || m.phase === "single"
+  );
   const canAdvanceBracket =
     editable &&
     currentRoundMatches.length > 1 &&
     currentRoundComplete &&
     !hasFinalMatch;
 
-  // Fase de grups: detectem si tots els matches de group són decidits.
-  // Envoltat en useMemo per estabilitzar la referència (alimenta useMemo
-  // de defaultQualifiers més avall).
   const groupMatches = useMemo(
     () => matchesByPhase.get("group") ?? [],
     [matchesByPhase]
@@ -108,10 +105,6 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
   const canBuildBracketFromGroups =
     editable && hasGroupStage && groupStageComplete && !bracketStarted;
 
-  // Selecció lliure de qualificats: per defecte agafem els top N de cada grup
-  // (segons event.config.qualifiersPerGroup), però l'admin pot afegir/treure
-  // equips manualment. Això permet, per exemple, escollir "1r de cada grup + un
-  // 2n" quan hi ha 3 grups i falta temps per jugar semis+quarts complets.
   const defaultQualifiers = useMemo(() => {
     if (!canBuildBracketFromGroups) return [] as string[];
     return pickQualifiers(
@@ -124,14 +117,10 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
   const [customQualifiers, setCustomQualifiers] = useState<Set<string> | null>(
     null
   );
-  // Si ja no estem en fase de selecció (bracket construït o no aplicable),
-  // netegem la selecció custom per si més tard es reobre.
   useEffect(() => {
     if (!canBuildBracketFromGroups) setCustomQualifiers(null);
   }, [canBuildBracketFromGroups]);
 
-  // Envoltat en useMemo perquè `new Set(...)` genera una referència nova
-  // a cada render i desestabilitzava `startPhaseLabel`.
   const selectedQualifiers = useMemo(
     () => customQualifiers ?? new Set(defaultQualifiers),
     [customQualifiers, defaultQualifiers]
@@ -155,12 +144,16 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
 
   const allDecided = matches.length > 0 && areAllMatchesDecided(matches);
   const canFinalize =
-    editable && allDecided && hasFinalMatch && currentRoundMatches.every((m) => m.winnerTeamId);
+    editable &&
+    allDecided &&
+    hasFinalMatch &&
+    currentRoundMatches.every((m) => m.winnerTeamId);
 
-  async function handleSetWinner(m: Match, winnerTeamId: string | null, opts?: {
-    scoreA?: number;
-    scoreB?: number;
-  }) {
+  async function handleSetWinner(
+    m: Match,
+    winnerTeamId: string | null,
+    opts?: { scoreA?: number; scoreB?: number }
+  ) {
     if (!editable) return;
     setBusyMatchId(m.id);
     setError(null);
@@ -233,12 +226,6 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
     setFinalizing(true);
     setError(null);
     try {
-      // La pestanya d'Assistència mostra "Present · +5" com a estat per defecte.
-      // Si l'admin no ha editat cap fila, no s'ha desat res a Firestore i el
-      // desglossament de punts acabaria amb bonus 0 per aquests participants.
-      // Abans de calcular els punts, persistim un registre d'assistència amb
-      // els valors per defecte per a cada participant elegible que encara no
-      // en tingui un (lògica al mòdul de domini + orquestració al repo).
       const fullAttendance = await attendanceRepo.ensureDefaults(
         seasonId,
         event.id,
@@ -292,9 +279,9 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
 
   if (matches.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500">
-        Encara no s'ha iniciat la competició. Ves a la tab <em>Equips</em> per
-        crear equips i començar.
+      <div className="card card-pad text-sm muted">
+        Encara no s'ha iniciat la competició. Ves a la pestanya{" "}
+        <em>Equips</em> per crear equips i començar.
       </div>
     );
   }
@@ -307,13 +294,15 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
         const list = matchesByPhase.get(phase);
         if (!list || list.length === 0) return null;
         return (
-          <section
-            key={phase}
-            className="rounded-lg border border-slate-200 bg-white"
-          >
-            <h2 className="border-b border-slate-100 px-6 py-3 text-sm font-semibold text-slate-900">
-              {PHASE_LABELS[phase]}
-            </h2>
+          <section key={phase} className="card">
+            <div className="card-header">
+              <span>{PHASE_LABELS[phase]}</span>
+              {phase !== "group" ? (
+                <span className="text-xs font-normal subtle">
+                  {list.length} partit{list.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
+            </div>
             {phase === "group" ? (
               <GroupPhaseView
                 matches={list}
@@ -327,7 +316,7 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
                 onToggleQualifier={toggleQualifier}
               />
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="card-divide">
                 {list
                   .slice()
                   .sort((a, b) => (a.round ?? 0) - (b.round ?? 0))
@@ -348,7 +337,7 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
       })}
 
       {editable ? (
-        <section className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-6">
+        <section className="card flex flex-wrap items-center gap-3 card-pad">
           {canBuildBracketFromGroups ? (
             <div className="flex flex-wrap items-center gap-3">
               <Button
@@ -362,16 +351,21 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
                     }`}
               </Button>
               {selectedQualifiers.size >= 2 && startPhaseLabel ? (
-                <span className="text-xs text-slate-500">
-                  Comença per <strong>{startPhaseLabel}</strong>
-                  {nextPowerOfTwo(selectedQualifiers.size) !== selectedQualifiers.size
+                <span className="text-xs muted">
+                  Comença per{" "}
+                  <strong className="text-slate-900 dark:text-white">
+                    {startPhaseLabel}
+                  </strong>
+                  {nextPowerOfTwo(selectedQualifiers.size) !==
+                  selectedQualifiers.size
                     ? ` (${
-                        nextPowerOfTwo(selectedQualifiers.size) - selectedQualifiers.size
+                        nextPowerOfTwo(selectedQualifiers.size) -
+                        selectedQualifiers.size
                       } byes)`
                     : ""}
                 </span>
               ) : (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs muted">
                   Selecciona almenys 2 equips a les classificacions.
                 </span>
               )}
@@ -387,12 +381,15 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
               variant="primary"
               onClick={handleFinalize}
               disabled={finalizing}
+              size="lg"
             >
-              {finalizing ? "Finalitzant…" : "Finalitzar i calcular punts"}
+              {finalizing ? "Finalitzant…" : "🏆 Finalitzar i calcular punts"}
             </Button>
           ) : null}
-          {!canBuildBracketFromGroups && !canAdvanceBracket && !canFinalize ? (
-            <p className="text-sm text-slate-500">
+          {!canBuildBracketFromGroups &&
+          !canAdvanceBracket &&
+          !canFinalize ? (
+            <p className="text-sm muted">
               Introdueix els resultats per poder avançar.
             </p>
           ) : null}
@@ -424,15 +421,15 @@ function MatchRow({
   const isBye = match.teamBId === null;
 
   return (
-    <li className="px-6 py-3">
+    <li className="px-4 py-3 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <TeamLine
             name={teamA?.name ?? "—"}
             isWinner={match.winnerTeamId === match.teamAId}
           />
           {isBye ? (
-            <p className="text-xs italic text-slate-500">Bye (passa directament)</p>
+            <p className="text-xs italic subtle">Bye (passa directament)</p>
           ) : (
             <TeamLine
               name={teamB?.name ?? "—"}
@@ -441,16 +438,22 @@ function MatchRow({
           )}
         </div>
         {!isBye && editable ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-              variant={match.winnerTeamId === match.teamAId ? "primary" : "secondary"}
+              variant={
+                match.winnerTeamId === match.teamAId ? "primary" : "secondary"
+              }
+              size="sm"
               onClick={() => onSetWinner(match.teamAId)}
               disabled={busy}
             >
               Guanya {teamA?.name ?? "A"}
             </Button>
             <Button
-              variant={match.winnerTeamId === match.teamBId ? "primary" : "secondary"}
+              variant={
+                match.winnerTeamId === match.teamBId ? "primary" : "secondary"
+              }
+              size="sm"
               onClick={() => onSetWinner(match.teamBId)}
               disabled={busy}
             >
@@ -465,8 +468,26 @@ function MatchRow({
 
 function TeamLine({ name, isWinner }: { name: string; isWinner: boolean }) {
   return (
-    <p className={`text-sm ${isWinner ? "font-semibold text-emerald-700" : "text-slate-700"}`}>
-      {isWinner ? "✓ " : ""}
+    <p
+      className={`flex items-center gap-1.5 text-sm ${
+        isWinner
+          ? "font-semibold text-emerald-700 dark:text-emerald-400"
+          : "text-slate-700 dark:text-slate-300"
+      }`}
+    >
+      {isWinner ? (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-3.5 w-3.5"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ) : null}
       {name}
     </p>
   );
@@ -493,12 +514,10 @@ function GroupPhaseView({
     winnerTeamId: string | null,
     opts?: { scoreA?: number; scoreB?: number }
   ) => void;
-  /** Si true, mostra una casella per escollir manualment els equips que passen. */
   selectionMode: boolean;
   selectedQualifiers: Set<string>;
   onToggleQualifier: (teamId: string) => void;
 }) {
-  // Agrupar per groupId
   const byGroup = new Map<string, Match[]>();
   for (const m of matches) {
     const gid = m.groupId ?? "group_?";
@@ -508,19 +527,26 @@ function GroupPhaseView({
   const groupIds = [...byGroup.keys()].sort();
 
   return (
-    <div className="divide-y divide-slate-100">
+    <div className="card-divide">
       {groupIds.map((gid) => {
         const gMatches = byGroup.get(gid)!;
         const groupTeams = teams.filter((t) => t.groupId === gid);
-        const standings = groupTeams.length > 0
-          ? groupStandings({ id: gid, teamIds: groupTeams.map((t) => t.id) }, gMatches)
-          : [];
+        const standings =
+          groupTeams.length > 0
+            ? groupStandings(
+                { id: gid, teamIds: groupTeams.map((t) => t.id) },
+                gMatches
+              )
+            : [];
         return (
-          <div key={gid} className="px-6 py-4 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">
-              Grup {gid.replace("group_", "")}
+          <div key={gid} className="space-y-3 px-4 py-4 sm:px-6">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+              <span className="grid h-6 w-6 place-items-center rounded-md bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                {gid.replace("group_", "").toUpperCase()}
+              </span>
+              Grup {gid.replace("group_", "").toUpperCase()}
             </h3>
-            <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+            <ul className="divide-y divide-slate-200/70 overflow-hidden rounded-xl border border-slate-200/70 dark:divide-slate-800/70 dark:border-slate-800/70">
               {gMatches.map((m) => {
                 const teamA = m.teamAId ? teamById.get(m.teamAId) : null;
                 const teamB = m.teamBId ? teamById.get(m.teamBId) : null;
@@ -531,9 +557,12 @@ function GroupPhaseView({
                   m.scoreB != null &&
                   m.scoreA === m.scoreB;
                 return (
-                  <li key={m.id} className="px-4 py-2 text-sm">
+                  <li
+                    key={m.id}
+                    className="bg-white px-3 py-2 text-sm dark:bg-slate-900/60"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <TeamLine
                           name={teamA?.name ?? "—"}
                           isWinner={m.winnerTeamId === m.teamAId}
@@ -543,33 +572,44 @@ function GroupPhaseView({
                           isWinner={m.winnerTeamId === m.teamBId}
                         />
                         {isDraw ? (
-                          <p className="text-xs italic text-slate-500">Empat</p>
+                          <p className="text-xs italic subtle">Empat</p>
                         ) : null}
                       </div>
                       {editable ? (
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <Button
-                            variant={m.winnerTeamId === m.teamAId ? "primary" : "secondary"}
+                            variant={
+                              m.winnerTeamId === m.teamAId
+                                ? "primary"
+                                : "secondary"
+                            }
+                            size="sm"
                             onClick={() => onSetResult(m, m.teamAId)}
                             disabled={busy}
                           >
-                            Guanya {teamA?.name ?? "A"}
-                          </Button>
-                          <Button
-                            variant={m.winnerTeamId === m.teamBId ? "primary" : "secondary"}
-                            onClick={() => onSetResult(m, m.teamBId)}
-                            disabled={busy}
-                          >
-                            Guanya {teamB?.name ?? "B"}
+                            {teamA?.name ?? "A"}
                           </Button>
                           <Button
                             variant={isDraw ? "primary" : "secondary"}
+                            size="sm"
                             onClick={() =>
                               onSetResult(m, null, { scoreA: 1, scoreB: 1 })
                             }
                             disabled={busy}
                           >
                             Empat
+                          </Button>
+                          <Button
+                            variant={
+                              m.winnerTeamId === m.teamBId
+                                ? "primary"
+                                : "secondary"
+                            }
+                            size="sm"
+                            onClick={() => onSetResult(m, m.teamBId)}
+                            disabled={busy}
+                          >
+                            {teamB?.name ?? "B"}
                           </Button>
                         </div>
                       ) : null}
@@ -579,45 +619,64 @@ function GroupPhaseView({
               })}
             </ul>
             {standings.length > 0 ? (
-              <table className="w-full text-xs">
-                <thead className="text-slate-500">
-                  <tr>
-                    {selectionMode ? (
-                      <th className="w-10 text-center" title="Passa a l'eliminatòria">
-                        Passa
-                      </th>
-                    ) : null}
-                    <th className="text-left">Equip</th>
-                    <th>PJ</th>
-                    <th>G</th>
-                    <th>E</th>
-                    <th>P</th>
-                    <th>Pts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {standings.map((s) => (
-                    <tr key={s.teamId} className="text-slate-700">
+              <div className="overflow-x-auto rounded-xl border border-slate-200/70 dark:border-slate-800/70">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50/80 text-left text-[0.65rem] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
+                    <tr>
                       {selectionMode ? (
-                        <td className="text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedQualifiers.has(s.teamId)}
-                            onChange={() => onToggleQualifier(s.teamId)}
-                            aria-label={`Passa ${teamById.get(s.teamId)?.name ?? s.teamId}`}
-                          />
-                        </td>
+                        <th className="w-10 px-2 py-2 text-center" title="Passa">
+                          Passa
+                        </th>
                       ) : null}
-                      <td>{teamById.get(s.teamId)?.name ?? s.teamId}</td>
-                      <td className="text-center">{s.played}</td>
-                      <td className="text-center">{s.wins}</td>
-                      <td className="text-center">{s.draws}</td>
-                      <td className="text-center">{s.losses}</td>
-                      <td className="text-center font-semibold">{s.points}</td>
+                      <th className="px-2 py-2">Equip</th>
+                      <th className="px-2 py-2 text-center">PJ</th>
+                      <th className="px-2 py-2 text-center">G</th>
+                      <th className="px-2 py-2 text-center">E</th>
+                      <th className="px-2 py-2 text-center">P</th>
+                      <th className="px-2 py-2 text-center">Pts</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800/70">
+                    {standings.map((s) => {
+                      const selected = selectedQualifiers.has(s.teamId);
+                      return (
+                        <tr
+                          key={s.teamId}
+                          className={
+                            selectionMode && selected
+                              ? "bg-brand-50/50 text-slate-800 dark:bg-brand-500/10 dark:text-slate-200"
+                              : "text-slate-700 dark:text-slate-300"
+                          }
+                        >
+                          {selectionMode ? (
+                            <td className="px-2 py-1.5 text-center">
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => onToggleQualifier(s.teamId)}
+                                aria-label={`Passa ${
+                                  teamById.get(s.teamId)?.name ?? s.teamId
+                                }`}
+                                className="h-4 w-4 accent-brand-600"
+                              />
+                            </td>
+                          ) : null}
+                          <td className="px-2 py-1.5 font-medium">
+                            {teamById.get(s.teamId)?.name ?? s.teamId}
+                          </td>
+                          <td className="px-2 py-1.5 text-center">{s.played}</td>
+                          <td className="px-2 py-1.5 text-center">{s.wins}</td>
+                          <td className="px-2 py-1.5 text-center">{s.draws}</td>
+                          <td className="px-2 py-1.5 text-center">{s.losses}</td>
+                          <td className="px-2 py-1.5 text-center font-bold text-brand-700 dark:text-brand-300">
+                            {s.points}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : null}
           </div>
         );
@@ -638,71 +697,95 @@ function FinalSummary({
   const participantById = new Map(participants.map((p) => [p.id, p]));
 
   return (
-    <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-emerald-900">
-          Esdeveniment finalitzat
-        </h2>
-        {onReopen ? (
-          <Button variant="secondary" onClick={onReopen}>
-            Reobrir
-          </Button>
+    <section className="card relative overflow-hidden border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/5">
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-300 to-emerald-600"
+      />
+      <div className="p-4 sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🏆</span>
+            <h2 className="text-base font-semibold text-emerald-900 dark:text-emerald-200">
+              Esdeveniment finalitzat
+            </h2>
+          </div>
+          {onReopen ? (
+            <Button variant="secondary" size="sm" onClick={onReopen}>
+              Reobrir
+            </Button>
+          ) : null}
+        </div>
+
+        {event.finalStandings && event.finalStandings.length > 0 ? (
+          <div className="mb-4">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-emerald-800 dark:text-emerald-300">
+              Classificació
+            </h3>
+            <ol className="space-y-1.5 text-sm">
+              {event.finalStandings.map((s, idx) => (
+                <li key={s.position} className="flex items-center gap-2">
+                  <Badge
+                    tone={idx === 0 ? "amber" : idx === 1 ? "slate" : idx === 2 ? "rose" : "slate"}
+                  >
+                    {s.position}
+                  </Badge>
+                  <span className="text-slate-800 dark:text-slate-200">
+                    {s.teamIds
+                      .map((tid) => teamById.get(tid)?.name ?? tid)
+                      .join(", ")}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+
+        {event.pointsBreakdown && event.pointsBreakdown.length > 0 ? (
+          <div className="overflow-x-auto">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-emerald-800 dark:text-emerald-300">
+              Punts per participant
+            </h3>
+            <table className="min-w-full text-xs">
+              <thead className="text-left text-[0.65rem] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                <tr>
+                  <th className="py-2">Participant</th>
+                  <th className="py-2 text-center">Punts guanyats</th>
+                  <th className="py-2 text-center">Bonus assist.</th>
+                  <th className="py-2 text-center">Pen.</th>
+                  <th className="py-2 text-center">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-emerald-200/50 dark:divide-emerald-500/20">
+                {event.pointsBreakdown
+                  .slice()
+                  .sort((a, b) => b.total - a.total)
+                  .map((b) => (
+                    <tr
+                      key={b.participantId}
+                      className="text-slate-700 dark:text-slate-300"
+                    >
+                      <td className="py-1.5 font-medium">
+                        {participantById.get(b.participantId)?.name ??
+                          b.participantId}
+                      </td>
+                      <td className="py-1.5 text-center">{b.positionPoints}</td>
+                      <td className="py-1.5 text-center">{b.bonusPoints}</td>
+                      <td className="py-1.5 text-center">{b.penaltyPoints}</td>
+                      <td className="py-1.5 text-center font-bold text-emerald-700 dark:text-emerald-300">
+                        {b.total}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </div>
-
-      {event.finalStandings && event.finalStandings.length > 0 ? (
-        <div>
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-emerald-800">
-            Classificació
-          </h3>
-          <ol className="space-y-1 text-sm text-slate-800">
-            {event.finalStandings.map((s) => (
-              <li key={s.position}>
-                <strong>{s.position}.</strong>{" "}
-                {s.teamIds.map((tid) => teamById.get(tid)?.name ?? tid).join(", ")}
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
-
-      {event.pointsBreakdown && event.pointsBreakdown.length > 0 ? (
-        <div className="overflow-x-auto">
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-emerald-800">
-            Punts per participant
-          </h3>
-          <table className="min-w-full text-xs">
-            <thead className="text-slate-500">
-              <tr>
-                <th className="text-left">Participant</th>
-                <th>Posició</th>
-                <th>Bonus</th>
-                <th>Penalització</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-emerald-100">
-              {event.pointsBreakdown
-                .slice()
-                .sort((a, b) => b.total - a.total)
-                .map((b) => (
-                  <tr key={b.participantId} className="text-slate-700">
-                    <td>{participantById.get(b.participantId)?.name ?? b.participantId}</td>
-                    <td className="text-center">{b.positionPoints}</td>
-                    <td className="text-center">{b.bonusPoints}</td>
-                    <td className="text-center">{b.penaltyPoints}</td>
-                    <td className="text-center font-semibold">{b.total}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
     </section>
   );
 }
 
-/** Selecciona els qualificats per defecte segons standings de cada grup (top N). */
 function pickQualifiers(
   teams: Team[],
   groupMatches: Match[],

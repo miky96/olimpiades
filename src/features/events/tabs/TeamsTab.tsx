@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
+import { Badge, Button, ErrorMessage, Field, Input, Select } from "@/ui/forms";
 import { matchesRepo, teamsRepo, eventsRepo } from "@/data";
 import type { Participant, Team } from "@/domain/types";
 import { competition } from "@/domain";
@@ -25,12 +25,6 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
   const [initBusy, setInitBusy] = useState(false);
-  /**
-   * Com es reparteixen els equips a la fase de grups:
-   *  - "order": els N primers afegits al grup A, els següents al B, etc.
-   *  - "random": repartiment aleatori.
-   * Només aplica per a format `group_stage_bracket`.
-   */
   const [groupAssignment, setGroupAssignment] = useState<"order" | "random">(
     "order"
   );
@@ -136,13 +130,11 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
       return;
     }
     if (event.format === "single_match" && eligibleTeams.length !== 2) {
-      setInitError("El format \"Partit únic\" requereix exactament 2 equips.");
+      setInitError('El format "Partit únic" requereix exactament 2 equips.');
       return;
     }
     if (event.format === "group_stage_bracket" && eligibleTeams.length < 4) {
-      setInitError(
-        "El format \"Lligueta + bracket\" necessita almenys 4 equips."
-      );
+      setInitError('El format "Lligueta + bracket" necessita almenys 4 equips.');
       return;
     }
     const ok = window.confirm(
@@ -155,14 +147,11 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
         eventId: event.id,
         teamIds: eligibleTeams.map((t) => t.id),
         config: event.config,
-        // Si l'admin escull aleatori i és format amb fase de grups, passem
-        // Math.random com a rng perquè `buildGroups` barregi.
         rng:
           event.format === "group_stage_bracket" && groupAssignment === "random"
             ? Math.random
             : undefined,
       });
-      // Assignem groupId a cada equip quan és group_stage_bracket.
       if (event.format === "group_stage_bracket" && result.groups) {
         for (const g of result.groups) {
           for (const tid of g.teamIds) {
@@ -202,9 +191,11 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
   return (
     <div className="space-y-6">
       {canEdit ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">Nou equip</h2>
-          <form onSubmit={handleCreate} className="space-y-3">
+        <section className="card card-pad">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest muted">
+            Nou equip
+          </h2>
+          <form onSubmit={handleCreate} className="space-y-4">
             <Field label="Nom de l'equip">
               <Input
                 type="text"
@@ -216,7 +207,7 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
             </Field>
             {availableParticipants.length > 0 ? (
               <div>
-                <p className="mb-1 text-sm font-medium text-slate-700">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide muted">
                   Participants inicials (opcional)
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -233,11 +224,12 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
                               : [...prev, p.id]
                           )
                         }
-                        className={`rounded-full border px-3 py-1 text-xs ${
+                        className={[
+                          "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                           selected
-                            ? "border-slate-900 bg-slate-900 text-white"
-                            : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                        }`}
+                            ? "border-brand-600 bg-brand-600 text-white shadow-sm dark:border-brand-500 dark:bg-brand-500"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-brand-400 hover:bg-brand-50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800",
+                        ].join(" ")}
                       >
                         {p.name}
                       </button>
@@ -256,24 +248,34 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
         </section>
       ) : null}
 
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <h2 className="border-b border-slate-100 px-6 py-3 text-sm font-semibold text-slate-900">
-          Equips ({teams.length})
-        </h2>
+      <section className="card">
+        <div className="card-header">
+          <span>Equips ({teams.length})</span>
+        </div>
         {teams.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">Encara no hi ha equips.</p>
+          <p className="p-6 text-sm muted">Encara no hi ha equips.</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="card-divide">
             {teams.map((team) => (
-              <li key={team.id} className="px-6 py-4 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-medium text-slate-900">{team.name}</p>
+              <li key={team.id} className="space-y-3 px-4 py-4 sm:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-slate-900 dark:text-white">
+                    {team.name}
+                  </p>
                   {canEdit ? (
                     <div className="flex items-center gap-2">
-                      <Button variant="secondary" onClick={() => handleRenameTeam(team)}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleRenameTeam(team)}
+                      >
                         Reanomenar
                       </Button>
-                      <Button variant="danger" onClick={() => handleRemoveTeam(team)}>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleRemoveTeam(team)}
+                      >
                         Eliminar
                       </Button>
                     </div>
@@ -294,76 +296,118 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
       </section>
 
       {canEdit && teams.length > 0 ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="mb-2 text-sm font-semibold text-slate-900">Iniciar competició</h2>
-          <p className="mb-4 text-sm text-slate-600">
+        <section className="card card-pad">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest muted">
+            Iniciar competició
+          </h2>
+          <p className="mb-4 text-sm muted">
             Un cop iniciada, es generaran els partits i no podràs modificar els
             equips. Podràs reiniciar-la si cal.
           </p>
           {event.format === "group_stage_bracket" ? (
             <fieldset className="mb-4">
-              <legend className="mb-2 text-sm font-medium text-slate-700">
+              <legend className="mb-2 text-xs font-medium uppercase tracking-wide muted">
                 Repartiment dels grups
               </legend>
-              <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
-                <label className="flex items-start gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="group-assignment"
-                    value="order"
-                    checked={groupAssignment === "order"}
-                    onChange={() => setGroupAssignment("order")}
-                    className="mt-0.5"
-                  />
-                  <span>
-                    <span className="font-medium">Per ordre d'afegit</span>
-                    <span className="block text-xs text-slate-500">
-                      Els primers equips van al grup A, els següents al B, etc.
-                    </span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="group-assignment"
-                    value="random"
-                    checked={groupAssignment === "random"}
-                    onChange={() => setGroupAssignment("random")}
-                    className="mt-0.5"
-                  />
-                  <span>
-                    <span className="font-medium">Aleatori</span>
-                    <span className="block text-xs text-slate-500">
-                      Els equips es barregen abans de repartir-se en grups.
-                    </span>
-                  </span>
-                </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <RadioOption
+                  checked={groupAssignment === "order"}
+                  onChange={() => setGroupAssignment("order")}
+                  title="Per ordre d'afegit"
+                  description="Els primers equips van al grup A, els següents al B, etc."
+                />
+                <RadioOption
+                  checked={groupAssignment === "random"}
+                  onChange={() => setGroupAssignment("random")}
+                  title="Aleatori"
+                  description="Els equips es barregen abans de repartir-se en grups."
+                />
               </div>
             </fieldset>
           ) : null}
           {initError ? (
-            <div className="mb-3"><ErrorMessage>{initError}</ErrorMessage></div>
+            <div className="mb-3">
+              <ErrorMessage>{initError}</ErrorMessage>
+            </div>
           ) : null}
-          <Button onClick={handleInitCompetition} disabled={initBusy}>
+          <Button onClick={handleInitCompetition} disabled={initBusy} size="lg">
             {initBusy ? "Iniciant…" : "Iniciar competició"}
           </Button>
         </section>
       ) : null}
 
       {!readOnly && event.status === "in_progress" ? (
-        <section className="rounded-lg border border-amber-200 bg-amber-50 p-6">
-          <h2 className="mb-2 text-sm font-semibold text-amber-900">
-            Competició en curs
-          </h2>
-          <p className="mb-3 text-sm text-amber-800">
-            Si cal, pots reiniciar la competició per tornar a configurar els equips.
-          </p>
-          <Button variant="danger" onClick={handleResetCompetition}>
-            Reiniciar competició
-          </Button>
+        <section className="card border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/30 dark:bg-amber-500/5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
+              </svg>
+            </span>
+            <div className="flex-1">
+              <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                Competició en curs
+              </h2>
+              <p className="mt-0.5 text-sm text-amber-800/90 dark:text-amber-100/80">
+                Si cal, pots reiniciar-la per tornar a configurar els equips.
+              </p>
+              <div className="mt-3">
+                <Button variant="danger" size="sm" onClick={handleResetCompetition}>
+                  Reiniciar competició
+                </Button>
+              </div>
+            </div>
+          </div>
         </section>
       ) : null}
     </div>
+  );
+}
+
+function RadioOption({
+  checked,
+  onChange,
+  title,
+  description,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <label
+      className={[
+        "flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm transition-colors",
+        checked
+          ? "border-brand-500 bg-brand-50/60 ring-1 ring-brand-500/30 dark:bg-brand-500/10"
+          : "border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600",
+      ].join(" ")}
+    >
+      <input
+        type="radio"
+        name="group-assignment"
+        checked={checked}
+        onChange={onChange}
+        className="mt-0.5 h-4 w-4 accent-brand-600"
+      />
+      <span>
+        <span className="block font-medium text-slate-900 dark:text-white">
+          {title}
+        </span>
+        <span className="block text-xs subtle">{description}</span>
+      </span>
+    </label>
   );
 }
 
@@ -387,27 +431,26 @@ function TeamMembers({
   return (
     <div className="space-y-2">
       {team.participantIds.length === 0 ? (
-        <p className="text-xs text-slate-500">Cap participant assignat.</p>
+        <p className="text-xs italic subtle">Cap participant assignat.</p>
       ) : (
-        <ul className="flex flex-wrap gap-2">
+        <ul className="flex flex-wrap gap-1.5">
           {team.participantIds.map((pid) => {
             const p = participantById.get(pid);
             return (
-              <li
-                key={pid}
-                className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-800"
-              >
-                <span>{p?.name ?? pid}</span>
-                {canEdit ? (
-                  <button
-                    type="button"
-                    onClick={() => onRemove(pid)}
-                    className="ml-1 text-slate-500 hover:text-red-600"
-                    aria-label="Treure participant"
-                  >
-                    ×
-                  </button>
-                ) : null}
+              <li key={pid}>
+                <Badge tone="brand">
+                  {p?.name ?? pid}
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => onRemove(pid)}
+                      className="ml-1 text-brand-500/70 transition-colors hover:text-rose-600"
+                      aria-label="Treure participant"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </Badge>
               </li>
             );
           })}
@@ -415,10 +458,10 @@ function TeamMembers({
       )}
       {canEdit && availableParticipants.length > 0 ? (
         <div className="flex items-center gap-2">
-          <select
-            className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          <Select
             value={pickerValue}
             onChange={(e) => setPickerValue(e.target.value)}
+            className="h-8 py-0 text-xs"
           >
             <option value="">Afegir participant…</option>
             {availableParticipants.map((p) => (
@@ -426,19 +469,19 @@ function TeamMembers({
                 {p.name}
               </option>
             ))}
-          </select>
-          <button
-            type="button"
+          </Select>
+          <Button
+            variant="secondary"
+            size="sm"
             disabled={!pickerValue}
             onClick={() => {
               if (!pickerValue) return;
               onAdd(pickerValue);
               setPickerValue("");
             }}
-            className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           >
             Afegir
-          </button>
+          </Button>
         </div>
       ) : null}
     </div>

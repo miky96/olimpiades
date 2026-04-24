@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { PageHeader } from "@/ui/PageHeader";
 import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
 import { useAuth } from "./useAuth";
 
@@ -36,9 +35,39 @@ export function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm">
-      <PageHeader title="Entra" description="Accés per a admins i superadmin." />
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-6">
+    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center">
+      <div className="mb-6 text-center">
+        <div
+          aria-hidden
+          className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-glow"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6"
+          >
+            <circle cx="6" cy="10" r="3.2" />
+            <circle cx="18" cy="10" r="3.2" />
+            <circle cx="12" cy="10" r="3.2" />
+            <path d="M3 17h18" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Benvingut de nou
+        </h1>
+        <p className="mt-1 text-sm muted">
+          Accés reservat a admins i superadmins.
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="card card-pad space-y-4 animate-fade-in"
+      >
         <Field label="Email">
           <Input
             type="email"
@@ -46,6 +75,7 @@ export function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            placeholder="nom@example.com"
           />
         </Field>
         <Field label="Contrasenya">
@@ -55,6 +85,7 @@ export function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
           />
         </Field>
         {error ? <ErrorMessage>{error}</ErrorMessage> : null}
@@ -63,7 +94,12 @@ export function LoginPage() {
             Aquest usuari no té permisos. Demana al superadmin que et doni d'alta.
           </ErrorMessage>
         ) : null}
-        <Button type="submit" disabled={submitting || loading} className="w-full">
+        <Button
+          type="submit"
+          disabled={submitting || loading}
+          size="lg"
+          className="w-full"
+        >
           {submitting || loading ? "Entrant…" : "Entra"}
         </Button>
       </form>
