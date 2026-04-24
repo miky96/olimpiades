@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PageHeader } from "@/ui/PageHeader";
-import { ErrorMessage } from "@/ui/forms";
+import { Badge, ErrorMessage } from "@/ui/forms";
 import {
   attendanceRepo,
   eventsRepo,
@@ -50,9 +50,6 @@ export function EventDetailPage() {
 
   const load = useCallback(async () => {
     if (!seasonId || !eventId) return;
-    // Només mostrem el placeholder de "Carregant…" a la càrrega inicial.
-    // Als refrescs posteriors mantenim la UI visible per no perdre el scroll ni
-    // fer saltar la pantalla cada cop que l'admin desa un resultat.
     setData((prev) => {
       if (prev === null) setLoading(true);
       return prev;
@@ -86,9 +83,9 @@ export function EventDetailPage() {
 
   if (!currentSeason) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="Esdeveniment" />
-        <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <div className="card card-pad text-sm muted">
           Cap temporada seleccionada.
         </div>
       </div>
@@ -97,11 +94,9 @@ export function EventDetailPage() {
 
   if (loading && !data) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="Esdeveniment" />
-        <p className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500">
-          Carregant…
-        </p>
+        <p className="card card-pad text-sm muted">Carregant…</p>
       </div>
     );
   }
@@ -111,7 +106,7 @@ export function EventDetailPage() {
       <div className="space-y-4">
         <PageHeader title="Esdeveniment" />
         <ErrorMessage>{error ?? "Esdeveniment no trobat."}</ErrorMessage>
-        <Link to="/esdeveniments" className="text-sm text-slate-700 underline">
+        <Link to="/esdeveniments" className="link text-sm">
           ← Tornar a la llista
         </Link>
       </div>
@@ -125,23 +120,42 @@ export function EventDetailPage() {
       <div>
         <Link
           to="/esdeveniments"
-          className="mb-2 inline-block text-xs text-slate-500 hover:text-slate-700"
+          className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
-          ← Esdeveniments
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3.5 w-3.5"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Esdeveniments
         </Link>
         <PageHeader
-          title={event.name ? `${event.name} · ${event.sport}` : event.sport}
-          description={`${event.date} · ${formatLabels[event.format]} · ${statusLabel(event.status)}`}
+          eyebrow={event.sport}
+          title={event.name || event.sport}
+          description={`${event.date} · ${formatLabels[event.format]}`}
+          action={<EventStatusBadge status={event.status} />}
         />
       </div>
 
       {error ? <ErrorMessage>{error}</ErrorMessage> : null}
 
-      <div className="flex gap-1 border-b border-slate-200">
+      <div
+        role="tablist"
+        className="flex gap-1 rounded-full bg-slate-100/80 p-1 text-sm dark:bg-slate-800/60"
+      >
         <TabButton active={tab === "teams"} onClick={() => setTab("teams")}>
           Equips
         </TabButton>
-        <TabButton active={tab === "attendance"} onClick={() => setTab("attendance")}>
+        <TabButton
+          active={tab === "attendance"}
+          onClick={() => setTab("attendance")}
+        >
           Assistència
         </TabButton>
         <TabButton active={tab === "results"} onClick={() => setTab("results")}>
@@ -149,38 +163,51 @@ export function EventDetailPage() {
         </TabButton>
       </div>
 
-      {tab === "teams" ? (
-        <TeamsTab data={data} readOnly={readOnly} onChanged={load} />
-      ) : tab === "attendance" ? (
-        <AttendanceTab data={data} readOnly={readOnly} onChanged={load} />
-      ) : (
-        <ResultsTab data={data} readOnly={readOnly} onChanged={load} />
-      )}
+      <div className="animate-fade-in">
+        {tab === "teams" ? (
+          <TeamsTab data={data} readOnly={readOnly} onChanged={load} />
+        ) : tab === "attendance" ? (
+          <AttendanceTab data={data} readOnly={readOnly} onChanged={load} />
+        ) : (
+          <ResultsTab data={data} readOnly={readOnly} onChanged={load} />
+        )}
+      </div>
 
       {canWrite && !isArchived && event.status !== "draft" ? (
-        <section className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
-          L'esdeveniment està {event.status === "in_progress" ? "en curs" : "finalitzat"}.
-          {event.status === "finished" ? (
-            <>
-              {" "}Per editar-lo de nou, hauràs de reobrir-lo des de la tab
-              <em> Resultats</em>.
-            </>
-          ) : null}
+        <section className="card flex items-start gap-3 p-4 text-xs muted">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-500"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
+          <div>
+            L'esdeveniment està{" "}
+            {event.status === "in_progress" ? "en curs" : "finalitzat"}.
+            {event.status === "finished" ? (
+              <>
+                {" "}Per editar-lo de nou, hauràs de reobrir-lo des de la pestanya
+                <em> Resultats</em>.
+              </>
+            ) : null}
+          </div>
         </section>
       ) : null}
     </div>
   );
 }
 
-function statusLabel(s: OlimpiadaEvent["status"]): string {
-  switch (s) {
-    case "draft":
-      return "Esborrany";
-    case "in_progress":
-      return "En curs";
-    case "finished":
-      return "Finalitzat";
-  }
+function EventStatusBadge({ status }: { status: OlimpiadaEvent["status"] }) {
+  if (status === "draft") return <Badge tone="slate">Esborrany</Badge>;
+  if (status === "in_progress") return <Badge tone="amber">En curs</Badge>;
+  return <Badge tone="emerald">Finalitzat</Badge>;
 }
 
 function TabButton({
@@ -195,15 +222,17 @@ function TabButton({
   return (
     <button
       type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
-      className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+      className={[
+        "flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-all",
         active
-          ? "border-slate-900 text-slate-900"
-          : "border-transparent text-slate-500 hover:text-slate-700"
-      }`}
+          ? "bg-white text-slate-900 shadow-card dark:bg-slate-900 dark:text-white"
+          : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100",
+      ].join(" ")}
     >
       {children}
     </button>
   );
 }
-

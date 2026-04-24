@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { PageHeader } from "@/ui/PageHeader";
-import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
+import { Badge, Button, ErrorMessage, Field, Input } from "@/ui/forms";
 import { seasonsRepo } from "@/data";
 import { useSeasons } from "./useSeasons";
 
@@ -8,7 +8,9 @@ export function SeasonsPage() {
   const { seasons, currentSeason, loading, error, refresh, selectSeason } =
     useSeasons();
   const [name, setName] = useState("");
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -18,7 +20,9 @@ export function SeasonsPage() {
     e.preventDefault();
     setFormError(null);
     if (hasActive) {
-      setFormError("Ja hi ha una temporada activa. Arxiva-la abans de crear-ne una de nova.");
+      setFormError(
+        "Ja hi ha una temporada activa. Arxiva-la abans de crear-ne una de nova."
+      );
       return;
     }
     setCreating(true);
@@ -56,13 +60,19 @@ export function SeasonsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Superadmin"
         title="Temporades"
         description="Només els superadmin poden crear o arxivar temporades."
       />
 
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Nova temporada</h2>
-        <form onSubmit={handleCreate} className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+      <section className="card card-pad">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest muted">
+          Nova temporada
+        </h2>
+        <form
+          onSubmit={handleCreate}
+          className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end"
+        >
           <Field label="Nom">
             <Input
               type="text"
@@ -84,64 +94,78 @@ export function SeasonsPage() {
             {creating ? "Creant…" : "Crear"}
           </Button>
         </form>
-        {formError ? <div className="mt-3"><ErrorMessage>{formError}</ErrorMessage></div> : null}
+        {formError ? (
+          <div className="mt-4">
+            <ErrorMessage>{formError}</ErrorMessage>
+          </div>
+        ) : null}
         {hasActive ? (
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs subtle">
             Només pot haver-hi una temporada activa a la vegada.
           </p>
         ) : null}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <h2 className="border-b border-slate-100 px-6 py-3 text-sm font-semibold text-slate-900">
-          Llista
-        </h2>
+      <section className="card">
+        <div className="card-header">
+          <span>Llista ({seasons.length})</span>
+        </div>
         {loading ? (
-          <p className="p-6 text-sm text-slate-500">Carregant…</p>
+          <p className="p-6 text-sm muted">Carregant…</p>
         ) : error ? (
-          <div className="p-6"><ErrorMessage>{error}</ErrorMessage></div>
+          <div className="p-6">
+            <ErrorMessage>{error}</ErrorMessage>
+          </div>
         ) : seasons.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">
+          <p className="p-6 text-sm muted">
             Encara no hi ha cap temporada. Crea la primera aquí a sobre.
           </p>
         ) : (
-          <ul className="divide-y divide-slate-100">
-            {seasons.map((s) => (
-              <li
-                key={s.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-medium text-slate-900">{s.name}</p>
-                  <p className="text-xs text-slate-500">
-                    Inici: {s.startDate}
-                    {s.endDate ? ` · Fi: ${s.endDate.slice(0, 10)}` : ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      s.status === "active"
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {s.status === "active" ? "Activa" : "Arxivada"}
-                  </span>
-                  <Button
-                    variant={currentSeason?.id === s.id ? "primary" : "secondary"}
-                    onClick={() => selectSeason(s.id)}
-                  >
-                    {currentSeason?.id === s.id ? "Seleccionada" : "Veure"}
-                  </Button>
-                  {s.status === "active" ? (
-                    <Button variant="danger" onClick={() => handleArchive(s.id)}>
-                      Arxivar
+          <ul className="card-divide">
+            {seasons.map((s) => {
+              const isSelected = currentSeason?.id === s.id;
+              return (
+                <li
+                  key={s.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm sm:px-6"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-slate-900 dark:text-white">
+                        {s.name}
+                      </p>
+                      {s.status === "active" ? (
+                        <Badge tone="emerald">Activa</Badge>
+                      ) : (
+                        <Badge tone="slate">Arxivada</Badge>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-xs subtle">
+                      Inici: {s.startDate}
+                      {s.endDate ? ` · Fi: ${s.endDate.slice(0, 10)}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant={isSelected ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => selectSeason(s.id)}
+                    >
+                      {isSelected ? "Seleccionada" : "Veure"}
                     </Button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
+                    {s.status === "active" ? (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleArchive(s.id)}
+                      >
+                        Arxivar
+                      </Button>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

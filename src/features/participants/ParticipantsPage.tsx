@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "@/ui/PageHeader";
-import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
+import { Badge, Button, ErrorMessage, Field, Input } from "@/ui/forms";
 import { participantsRepo } from "@/data";
 import type { Participant } from "@/domain/types";
 import { useSeasons } from "@/features/seasons/useSeasons";
@@ -41,9 +41,9 @@ export function ParticipantsPage() {
 
   if (!currentSeason) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="Participants" />
-        <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <div className="card card-pad text-sm muted">
           Cap temporada seleccionada. Crea'n una a <em>Temporades</em>.
         </div>
       </div>
@@ -71,7 +71,9 @@ export function ParticipantsPage() {
   async function handleToggleActive(p: Participant) {
     if (!canWrite || !currentSeason) return;
     try {
-      await participantsRepo.update(currentSeason.id, p.id, { active: !p.active });
+      await participantsRepo.update(currentSeason.id, p.id, {
+        active: !p.active,
+      });
       await load();
     } catch (e) {
       console.error(e);
@@ -83,7 +85,9 @@ export function ParticipantsPage() {
     const next = window.prompt("Nou nom:", p.name);
     if (!next || next.trim() === p.name) return;
     try {
-      await participantsRepo.update(currentSeason.id, p.id, { name: next.trim() });
+      await participantsRepo.update(currentSeason.id, p.id, {
+        name: next.trim(),
+      });
       await load();
     } catch (e) {
       console.error(e);
@@ -102,17 +106,27 @@ export function ParticipantsPage() {
     }
   }
 
+  const activeCount = participants.filter((p) => p.active).length;
+
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow={currentSeason.name}
         title="Participants"
-        description={`Temporada: ${currentSeason.name}${isArchived ? " (arxivada, només lectura)" : ""}`}
+        description={`${activeCount} actius · ${participants.length} en total${
+          isArchived ? " · temporada arxivada (només lectura)" : ""
+        }`}
       />
 
       {canWrite && !isArchived ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">Nou participant</h2>
-          <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
+        <section className="card card-pad">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest muted">
+            Nou participant
+          </h2>
+          <form
+            onSubmit={handleCreate}
+            className="flex flex-wrap items-end gap-3"
+          >
             <Field label="Nom" className="flex-1 min-w-[200px]">
               <Input
                 type="text"
@@ -129,43 +143,57 @@ export function ParticipantsPage() {
         </section>
       ) : null}
 
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <h2 className="border-b border-slate-100 px-6 py-3 text-sm font-semibold text-slate-900">
-          Llista ({participants.length})
-        </h2>
+      <section className="card">
+        <div className="card-header">
+          <span>Llista ({participants.length})</span>
+        </div>
         {loading ? (
-          <p className="p-6 text-sm text-slate-500">Carregant…</p>
+          <p className="p-6 text-sm muted">Carregant…</p>
         ) : error ? (
-          <div className="p-6"><ErrorMessage>{error}</ErrorMessage></div>
+          <div className="p-6">
+            <ErrorMessage>{error}</ErrorMessage>
+          </div>
         ) : participants.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">Encara no hi ha participants.</p>
+          <p className="p-6 text-sm muted">Encara no hi ha participants.</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="card-divide">
             {participants.map((p) => (
               <li
                 key={p.id}
                 className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-6"
               >
                 <div className="min-w-0 flex-1">
-                  <p
-                    className="truncate font-medium text-slate-900"
-                    title={p.name}
-                  >
-                    {p.name}
-                  </p>
-                  {!p.active ? (
-                    <span className="text-xs text-slate-500">Inactiu</span>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    <p
+                      className="truncate font-medium text-slate-900 dark:text-slate-100"
+                      title={p.name}
+                    >
+                      {p.name}
+                    </p>
+                    {!p.active ? <Badge tone="slate">Inactiu</Badge> : null}
+                  </div>
                 </div>
                 {canWrite && !isArchived ? (
                   <div className="flex flex-shrink-0 items-center gap-2">
-                    <Button variant="secondary" onClick={() => handleRename(p)}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleRename(p)}
+                    >
                       Reanomenar
                     </Button>
-                    <Button variant="secondary" onClick={() => handleToggleActive(p)}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleToggleActive(p)}
+                    >
                       {p.active ? "Desactivar" : "Activar"}
                     </Button>
-                    <Button variant="danger" onClick={() => handleRemove(p)}>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleRemove(p)}
+                    >
                       Eliminar
                     </Button>
                   </div>

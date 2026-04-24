@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/ui/PageHeader";
-import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
+import { Badge, Button, ErrorMessage, Field, Input, Select } from "@/ui/forms";
 import { eventsRepo } from "@/data";
 import type { EventFormat, OlimpiadaEvent } from "@/domain/types";
 import { formatLabels } from "@/domain/formatLabels";
@@ -49,9 +49,9 @@ export function EventsPage() {
 
   if (!currentSeason) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="Esdeveniments" />
-        <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <div className="card card-pad text-sm muted">
           Cap temporada seleccionada. Crea'n una a <em>Temporades</em>.
         </div>
       </div>
@@ -117,14 +117,21 @@ export function EventsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow={currentSeason.name}
         title="Esdeveniments"
-        description={`Temporada: ${currentSeason.name}${isArchived ? " (arxivada, només lectura)" : ""}`}
+        description={
+          isArchived
+            ? "Temporada arxivada — només lectura."
+            : `${events.length} esdeveniment${events.length === 1 ? "" : "s"} programat${events.length === 1 ? "" : "s"}.`
+        }
       />
 
       {canWrite && !isArchived ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">Nou esdeveniment</h2>
-          <form onSubmit={handleCreate} className="grid gap-3 md:grid-cols-2">
+        <section className="card card-pad">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest muted">
+            Nou esdeveniment
+          </h2>
+          <form onSubmit={handleCreate} className="grid gap-4 md:grid-cols-2">
             <Field label="Esport">
               <Input
                 type="text"
@@ -151,8 +158,7 @@ export function EventsPage() {
               />
             </Field>
             <Field label="Format">
-              <select
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              <Select
                 value={format}
                 onChange={(e) => setFormat(e.target.value as EventFormat)}
               >
@@ -161,21 +167,22 @@ export function EventsPage() {
                     {formatLabels[f]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             {format === "group_stage_bracket" ? (
               <Field label="Mida de grup">
-                <select
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                <Select
                   value={groupSize}
-                  onChange={(e) => setGroupSize(Number(e.target.value) as 3 | 4)}
+                  onChange={(e) =>
+                    setGroupSize(Number(e.target.value) as 3 | 4)
+                  }
                 >
                   <option value={3}>3 equips per grup</option>
                   <option value={4}>4 equips per grup</option>
-                </select>
+                </Select>
               </Field>
             ) : null}
-            <div className="md:col-span-2 flex items-center justify-end gap-3">
+            <div className="md:col-span-2 flex flex-wrap items-center justify-end gap-3">
               {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
               <Button type="submit" disabled={creating}>
                 {creating ? "Creant…" : "Crear"}
@@ -185,42 +192,62 @@ export function EventsPage() {
         </section>
       ) : null}
 
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <h2 className="border-b border-slate-100 px-6 py-3 text-sm font-semibold text-slate-900">
-          Llista ({events.length})
-        </h2>
+      <section className="card">
+        <div className="card-header">
+          <span>Llista ({events.length})</span>
+        </div>
         {loading ? (
-          <p className="p-6 text-sm text-slate-500">Carregant…</p>
+          <p className="p-6 text-sm muted">Carregant…</p>
         ) : error ? (
-          <div className="p-6"><ErrorMessage>{error}</ErrorMessage></div>
+          <div className="p-6">
+            <ErrorMessage>{error}</ErrorMessage>
+          </div>
         ) : events.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">Encara no hi ha esdeveniments.</p>
+          <p className="p-6 text-sm muted">Encara no hi ha esdeveniments.</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="card-divide">
             {events.map((ev) => (
               <li
                 key={ev.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm sm:px-6"
               >
-                <div>
-                  <p className="font-medium text-slate-900">
-                    {ev.name ? `${ev.name} · ` : ""}
-                    {ev.sport}
-                  </p>
-                  <p className="text-xs text-slate-500">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-slate-900 dark:text-white">
+                      {ev.name ? `${ev.name} · ` : ""}
+                      {ev.sport}
+                    </p>
+                    <StatusBadge status={ev.status} />
+                  </div>
+                  <p className="mt-0.5 text-xs subtle">
                     {ev.date} · {formatLabels[ev.format]}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={ev.status} />
+                <div className="flex flex-shrink-0 items-center gap-2">
                   <Link
                     to={`/esdeveniments/${ev.id}`}
-                    className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:hover:bg-slate-800"
                   >
                     Obrir
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-3.5 w-3.5"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
                   </Link>
                   {canWrite && !isArchived && ev.status === "draft" ? (
-                    <Button variant="danger" onClick={() => handleRemove(ev)}>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleRemove(ev)}
+                    >
                       Eliminar
                     </Button>
                   ) : null}
@@ -235,19 +262,14 @@ export function EventsPage() {
 }
 
 function StatusBadge({ status }: { status: OlimpiadaEvent["status"] }) {
-  const styles: Record<OlimpiadaEvent["status"], string> = {
-    draft: "bg-slate-100 text-slate-700",
-    in_progress: "bg-amber-100 text-amber-800",
-    finished: "bg-emerald-100 text-emerald-800",
+  const config: Record<
+    OlimpiadaEvent["status"],
+    { tone: "slate" | "amber" | "emerald"; label: string }
+  > = {
+    draft: { tone: "slate", label: "Esborrany" },
+    in_progress: { tone: "amber", label: "En curs" },
+    finished: { tone: "emerald", label: "Finalitzat" },
   };
-  const labels: Record<OlimpiadaEvent["status"], string> = {
-    draft: "Esborrany",
-    in_progress: "En curs",
-    finished: "Finalitzat",
-  };
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
-      {labels[status]}
-    </span>
-  );
+  const c = config[status];
+  return <Badge tone={c.tone}>{c.label}</Badge>;
 }
