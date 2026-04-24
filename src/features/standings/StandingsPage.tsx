@@ -168,7 +168,7 @@ function Podium({ rows }: { rows: Row[] }) {
               <span className="text-3xl font-bold text-brand-600 dark:text-brand-400">
                 {r.total}
               </span>
-              <span className="text-xs muted">punts · {r.events} esdev.</span>
+              <span className="text-xs muted">{r.events} esdev.</span>
             </div>
           </div>
         ))}
@@ -201,7 +201,7 @@ function StandingsTable({ rows }: { rows: Row[] }) {
                   {r.participantName}
                 </p>
                 <p className="text-xs subtle">
-                  {r.events} esdev. · pos {r.positionPoints} · bonus {r.bonusPoints}
+                  {r.events} esdev. · punts {r.positionPoints} · bonus {r.bonusPoints}
                   {r.penaltyPoints ? ` · pen ${r.penaltyPoints}` : ""}
                 </p>
               </div>
