@@ -151,7 +151,7 @@ function Podium({ rows }: { rows: Row[] }) {
               >
                 {MEDAL_EMOJIS[idx]}
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs uppercase tracking-widest subtle">
                   {idx + 1}
                   {idx === 0 ? "r" : idx === 1 ? "n" : "r"} lloc
@@ -163,9 +163,7 @@ function Podium({ rows }: { rows: Row[] }) {
                   {r.participantName}
                 </p>
               </div>
-            </div>
-            <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-3xl font-bold text-brand-600 dark:text-brand-400">
+              <span className="flex-shrink-0 text-3xl font-bold text-brand-600 dark:text-brand-400">
                 {r.total}
               </span>
             </div>
