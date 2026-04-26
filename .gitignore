@@ -33,3 +33,5 @@ ui-debug.log
 coverage/
 src/**/*.js
 src/**/*.test.js
+_smoke-randomteams.mts
+_smoke.mts

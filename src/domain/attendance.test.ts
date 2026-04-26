@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeMissingAttendanceDefaults } from "./attendance";
+import {
+  computeMissingAttendanceDefaults,
+  selectPresentParticipants,
+} from "./attendance";
 import type { AttendanceRecord, Participant } from "./types";
 
 function p(id: string, active = true): Participant {
@@ -78,5 +81,42 @@ describe("computeMissingAttendanceDefaults", () => {
     });
 
     expect(result).toEqual([]);
+  });
+});
+
+describe("selectPresentParticipants", () => {
+  it("inclou actius sense registre (default present)", () => {
+    const result = selectPresentParticipants(
+      [p("alice"), p("bob")],
+      []
+    );
+    expect(result.map((x) => x.id).sort()).toEqual(["alice", "bob"]);
+  });
+
+  it("exclou inactius sense registre", () => {
+    const result = selectPresentParticipants(
+      [p("alice"), p("ghost", false)],
+      []
+    );
+    expect(result.map((x) => x.id)).toEqual(["alice"]);
+  });
+
+  it("inclou inactius amb registre present (van venir puntualment)", () => {
+    const result = selectPresentParticipants(
+      [p("alice"), p("returnee", false)],
+      [a("returnee", { status: "present" })]
+    );
+    expect(result.map((x) => x.id).sort()).toEqual(["alice", "returnee"]);
+  });
+
+  it("exclou actius amb registre absent o late", () => {
+    const result = selectPresentParticipants(
+      [p("alice"), p("late"), p("absent")],
+      [
+        a("late", { status: "late" }),
+        a("absent", { status: "absent_notified" }),
+      ]
+    );
+    expect(result.map((x) => x.id)).toEqual(["alice"]);
   });
 });

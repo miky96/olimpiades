@@ -5,6 +5,7 @@ import type { Participant, Team } from "@/domain/types";
 import { competition } from "@/domain";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
+import { RandomTeamsGenerator } from "./RandomTeamsGenerator";
 
 interface Props {
   data: EventData;
@@ -190,6 +191,16 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
 
   return (
     <div className="space-y-6">
+      {canEdit && teams.length === 0 ? (
+        <RandomTeamsGenerator
+          seasonId={seasonId}
+          eventId={event.id}
+          participants={participants}
+          attendance={data.attendance}
+          onGenerated={onChanged}
+        />
+      ) : null}
+
       {canEdit ? (
         <section className="card card-pad">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest muted">

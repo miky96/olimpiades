@@ -47,3 +47,26 @@ export function computeMissingAttendanceDefaults(args: {
     penaltyPoints: defaults.penaltyPoints,
   }));
 }
+
+/**
+ * Retorna els participants que compten com a "presents" a l'esdeveniment.
+ *
+ * Regla:
+ *  - Si tenen un registre d'assistència: només compten si status === "present".
+ *  - Si NO tenen registre i són actius: compten com a present (mateix default
+ *    que aplica AttendanceTab abans de desar res).
+ *  - Inactius sense registre: queden fora.
+ */
+export function selectPresentParticipants(
+  participants: Participant[],
+  attendance: AttendanceRecord[]
+): Participant[] {
+  const byParticipant = new Map(
+    attendance.map((a) => [a.participantId, a] as const)
+  );
+  return participants.filter((p) => {
+    const rec = byParticipant.get(p.id);
+    if (rec) return rec.status === "present";
+    return p.active;
+  });
+}

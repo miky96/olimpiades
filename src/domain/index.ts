@@ -10,3 +10,4 @@ export * from "./competition/bracket";
 export * from "./competition/groupStage";
 export * from "./competition/singleMatch";
 export * from "./competition/shuffle";
+export * from "./competition/randomTeams";
