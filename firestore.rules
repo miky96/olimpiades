@@ -3,9 +3,12 @@ rules_version = '2';
 // Reglament base per a l'MVP.
 // - Participants (públic sense login): poden llegir classificacions i dades
 //   derivades, mai escriure.
-// - Admins i superadmins: poden escriure. El rol es guarda a /users/{uid}.
-//   A futur es migrarà a custom claims per no haver de llegir l'usuari a cada
-//   regla. A l'MVP, mantenim la simplicitat al preu d'una lectura extra.
+// - Admins i superadmins: poden escriure. El rol i l'estat es llegeixen dels
+//   custom claims del token (sincronitzats des de /users/{uid} per la Cloud
+//   Function `syncUserClaims`). Així evitem un `get()` per regla.
+//
+// Si un admin acaba d'editar el seu propi rol, el token actual encara pot
+// portar les claims antigues fins al següent refresc (~1h o `getIdToken(true)`).
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,11 +18,11 @@ service cloud.firestore {
     }
 
     function userRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return request.auth.token.role;
     }
 
     function userStatus() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status;
+      return request.auth.token.status;
     }
 
     function isActiveAdmin() {
@@ -35,6 +38,9 @@ service cloud.firestore {
     }
 
     // --- Gestió d'usuaris (només superadmin) ---
+    // La lectura del propi doc no depèn de claims: així un usuari acabat de
+    // crear pot carregar el seu perfil encara que la Cloud Function no hagi
+    // propagat les claims (cosa que pot trigar uns segons al primer alta).
     match /users/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid || isSuperAdmin();
       allow create, update, delete: if isSuperAdmin();

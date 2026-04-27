@@ -5,6 +5,9 @@ coverage
 .firebase
 *.min.js
 
+# Cloud Functions tenen el seu propi tsconfig i lint (npm run lint --prefix functions)
+functions
+
 # Artefactes de build TS (declaracions generades)
 vite.config.d.ts
 vitest.config.d.ts

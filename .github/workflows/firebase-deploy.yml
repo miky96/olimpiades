@@ -25,8 +25,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install functions dependencies
+        run: npm ci --prefix functions
+
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Typecheck functions
+        run: npm run lint --prefix functions
 
       - name: Test
         run: npm test
@@ -42,18 +48,21 @@ jobs:
           VITE_USE_FIREBASE_EMULATORS: "false"
         run: npm run build
 
+      - name: Build functions
+        run: npm run build --prefix functions
+
       - name: Write service account credentials
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-sa.json"
 
-      - name: Deploy hosting + Firestore rules/indexes
+      - name: Deploy hosting + Firestore rules/indexes + functions
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
         run: |
           npx --yes firebase-tools deploy \
-            --only hosting,firestore:rules,firestore:indexes \
+            --only hosting,firestore:rules,firestore:indexes,functions \
             --project "${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
             --non-interactive
 

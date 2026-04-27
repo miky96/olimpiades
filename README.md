@@ -45,7 +45,7 @@ Prioritzem una solució simple, mantenible i de cost proper a zero en MVP sobre 
 - **Tests**: Vitest
 - **Linting / Types**: ESLint + TypeScript (`tsc --noEmit`)
 
-> Nota: de moment no hi ha backend propi. La lògica d'accés a dades viu al client amb **Security Rules** de Firestore. Si en algun cas convé, s'afegirà una capa servidor (per exemple Cloud Functions) de manera aïllada.
+> Nota: la lògica d'accés a dades viu majoritàriament al client amb **Security Rules** de Firestore. L'única peça de servidor és una **Cloud Function** (`functions/`) que sincronitza el rol i l'estat de cada usuari com a *custom claims* de Firebase Auth, perquè les rules els puguin llegir del token sense un `get()` extra per regla.
 
 ---
 
@@ -84,7 +84,8 @@ npm run dev
 | `npm run emulators` | Arrenca els emuladors de Firebase. |
 | `npm run deploy:hosting` | Fa build i desplega a Firebase Hosting. |
 | `npm run deploy:rules` | Desplega regles i índexs de Firestore. |
-| `npm run deploy` | Desplega regles + hosting en un sol pas. |
+| `npm run deploy:functions` | Desplega Cloud Functions (`functions/`). |
+| `npm run deploy` | Desplega regles + functions + hosting en un sol pas. |
 
 ---
 
@@ -93,9 +94,13 @@ npm run dev
 ```
 .
 ├── docs/                         # Producte, regles, dubtes, decisions
-├── firebase.json                 # Configuració Firebase (hosting + firestore)
-├── firestore.rules               # Security Rules
+├── firebase.json                 # Configuració Firebase (hosting + firestore + functions)
+├── firestore.rules               # Security Rules (llegeixen role/status dels custom claims)
 ├── firestore.indexes.json
+├── functions/                    # Cloud Functions (sincronització de custom claims)
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/index.ts
 ├── src/
 │   ├── domain/                   # Regles de negoci pures (testable sense Firebase)
 │   │   ├── types.ts              # Tipus del domini
@@ -117,6 +122,22 @@ npm run dev
 ├── tailwind.config.js
 └── postcss.config.js
 ```
+
+---
+
+## Cloud Functions i custom claims
+
+A `functions/` hi ha una única funció, `syncUserClaims`, que escolta canvis al doc `/users/{uid}` (Firestore trigger v2) i propaga `role` i `status` com a *custom claims* de Firebase Auth.
+
+Per què: les Security Rules llegeixen els claims directament del token (`request.auth.token.role`), evitant un `get()` per regla i estalviant lectures de Firestore a escala.
+
+Notes operatives:
+
+- Per desplegar Cloud Functions, el projecte Firebase ha d'estar en pla **Blaze** (pay-as-you-go). El tier gratuït cobreix de sobres l'MVP (2M invocacions/mes).
+- La funció és **idempotent**: si `role` i `status` no canvien, no toca res.
+- **Propagació al client**: l'ID token actual només es refresca cada ~1h o forçant `firebaseUser.getIdToken(true)`. Per tant, un admin acabat de promoure pot necessitar tornar a iniciar sessió per veure els canvis efectius.
+- Desenvolupament local: `cd functions && npm install && npm run build`. Després `firebase emulators:start` arrenca també l'emulador de functions.
+- Backfill: el trigger només dispara amb canvis a partir d'ara. Com que la funció és idempotent, una escriptura amb els mateixos valors es descarta. Per als usuaris ja existents, opcions: (a) un script puntual amb Admin SDK (`auth().setCustomUserClaims`) per a tots els docs de `/users`, o (b) tocar momentàniament `status` (p. ex. `block` + `unblock`) perquè el trigger reapliqui les claims.
 
 ---
 
