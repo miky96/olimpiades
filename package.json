@@ -15,7 +15,8 @@
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
     "deploy:functions": "firebase deploy --only functions",
-    "deploy": "npm run deploy:rules && npm run deploy:functions && npm run deploy:hosting"
+    "deploy": "npm run deploy:rules && npm run deploy:functions && npm run deploy:hosting",
+    "postinstall": "node scripts/install-functions.cjs"
   },
   "dependencies": {
     "firebase": "^10.13.0",
