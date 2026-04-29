@@ -5,7 +5,7 @@
   "description": "Cloud Functions per a Olimpiades (sincronització de custom claims).",
   "main": "lib/index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
     "build": "tsc",
