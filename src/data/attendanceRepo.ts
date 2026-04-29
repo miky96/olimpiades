@@ -1,4 +1,10 @@
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  writeBatch,
+} from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import type { AttendanceRecord, Participant } from "@/domain/types";
 import { computeMissingAttendanceDefaults } from "@/domain/attendance";
@@ -70,16 +76,24 @@ export const attendanceRepo = {
       existing,
     });
     if (missing.length === 0) return existing;
-    await Promise.all(
-      missing.map((r) =>
-        attendanceRepo.upsert(seasonId, eventId, {
-          participantId: r.participantId,
-          status: r.status,
-          bonusPoints: r.bonusPoints,
-          penaltyPoints: r.penaltyPoints,
-        })
-      )
-    );
+    // Atòmic: si fallés a meitat, no quedarien defaults parcialment persistits
+    // que l'usuari no ha pogut veure ni editar.
+    const db = getDb();
+    const batch = writeBatch(db);
+    for (const r of missing) {
+      const ref = doc(
+        db,
+        paths.attendanceRecord(seasonId, eventId, r.participantId)
+      );
+      batch.set(ref, {
+        eventId,
+        participantId: r.participantId,
+        status: r.status,
+        bonusPoints: r.bonusPoints,
+        penaltyPoints: r.penaltyPoints,
+      });
+    }
+    await batch.commit();
     return [...existing, ...missing];
   },
 };

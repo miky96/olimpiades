@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Badge, Button, ErrorMessage, Field, Input, Select } from "@/ui/forms";
-import { matchesRepo, teamsRepo, eventsRepo } from "@/data";
+import { competitionRepo, matchesRepo, teamsRepo, eventsRepo } from "@/data";
 import type { Participant, Team } from "@/domain/types";
 import { competition } from "@/domain";
 import { useSeasons } from "@/features/seasons/useSeasons";
@@ -153,15 +153,21 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
             ? Math.random
             : undefined,
       });
-      if (event.format === "group_stage_bracket" && result.groups) {
-        for (const g of result.groups) {
-          for (const tid of g.teamIds) {
-            await teamsRepo.update(seasonId, event.id, tid, { groupId: g.id });
-          }
-        }
-      }
-      await matchesRepo.bulkCreate(seasonId, event.id, result.matches);
-      await eventsRepo.update(seasonId, event.id, { status: "in_progress" });
+      const teamGroupAssignments =
+        event.format === "group_stage_bracket" && result.groups
+          ? result.groups.flatMap((g) =>
+              g.teamIds.map((teamId) => ({ teamId, groupId: g.id }))
+            )
+          : undefined;
+      // Atòmic: groupIds + matches + status passen en un sol writeBatch.
+      // Si caigués al mig, no es persistiria cap escriptura parcial i
+      // l'usuari pot reintentar sense risc de duplicar matches.
+      await competitionRepo.startCompetition({
+        seasonId,
+        eventId: event.id,
+        teamGroupAssignments,
+        matches: result.matches,
+      });
       await onChanged();
     } catch (err) {
       console.error(err);
