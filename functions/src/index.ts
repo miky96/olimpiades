@@ -41,11 +41,12 @@ interface UserClaims {
 
 /**
  * Trigger v2: es dispara a qualsevol create/update/delete de /users/{uid}.
- * Regió per defecte (us-central1). Si cal apropar-la a Europa, afegir
- * `region: "europe-west1"` aquí. Per a un MVP amb pocs canvis, no és crític.
+ * Desplegat a `europe-west1` per estar a la mateixa multi-regió que la base
+ * de dades Firestore (`eur3`). Així el trigger d'Eventarc no fa salts
+ * transatlàntics i evitem mal comportament del provisioning cross-region.
  */
 export const syncUserClaims = onDocumentWritten(
-  "users/{uid}",
+  { document: "users/{uid}", region: "europe-west1" },
   async (event) => {
     const uid = event.params.uid;
     const after = event.data?.after.data() as UserDoc | undefined;
