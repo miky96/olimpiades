@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { hasRole, useAuth } from "@/features/auth/useAuth";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import { Button, Select } from "@/ui/forms";
+import { OfflineIndicator } from "@/ui/OfflineIndicator";
 import type { Role } from "@/domain/types";
 
 interface NavItem {
@@ -66,6 +67,7 @@ export function AppLayout() {
           </Link>
 
           <div className="flex items-center gap-2 text-sm">
+            <OfflineIndicator />
             {seasons.length > 0 ? (
               <Select
                 value={currentSeason?.id ?? ""}
