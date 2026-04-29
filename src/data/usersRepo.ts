@@ -21,9 +21,15 @@ function fromDoc(id: string, data: Record<string, unknown>): AppUser {
 
 /**
  * Gestió de usuaris admin/superadmin.
- * El rol real s'ha de reflectir també com a custom claim a Firebase Auth
- * (aquesta part es fa amb una Cloud Function en fase 2; a l'MVP ho mantenim
- * només a Firestore i ho validem amb Security Rules).
+ *
+ * `role` i `status` viuen al doc `/users/{uid}`. La Cloud Function
+ * `syncUserClaims` (functions/src/index.ts) escolta canvis en aquest doc i
+ * els reflecteix com a custom claims a Firebase Auth, que són els que les
+ * Security Rules consulten directament des del token.
+ *
+ * Propagació: el client només veurà les claims noves al següent refresc del
+ * token (~1h o `firebaseUser.getIdToken(true)`). Per a un acabat de promoure
+ * a admin, pot caldre tornar a iniciar sessió.
  */
 export const usersRepo = {
   async list(): Promise<AppUser[]> {
