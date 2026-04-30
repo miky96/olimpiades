@@ -52,6 +52,41 @@ export const attendanceRepo = {
   },
 
   /**
+   * Persisteix múltiples assistències en una sola operació atòmica.
+   * Pensat per fluxos de marcatge massiu (p. ex. "Marca aquests 30 com a present"):
+   * un únic round-trip a Firestore i, si falla, no queden estats parcials.
+   *
+   * Si la llista és buida no fa cap escriptura.
+   */
+  async upsertMany(
+    seasonId: string,
+    eventId: string,
+    records: Omit<AttendanceRecord, "id" | "eventId">[]
+  ): Promise<void> {
+    if (records.length === 0) return;
+    const db = getDb();
+    const batch = writeBatch(db);
+    for (const r of records) {
+      const ref = doc(
+        db,
+        paths.attendanceRecord(seasonId, eventId, r.participantId)
+      );
+      const payload: Record<string, unknown> = {
+        eventId,
+        participantId: r.participantId,
+        status: r.status,
+        bonusPoints: r.bonusPoints,
+        penaltyPoints: r.penaltyPoints,
+      };
+      if (r.comment && r.comment.trim().length > 0) {
+        payload.comment = r.comment.trim();
+      }
+      batch.set(ref, payload);
+    }
+    await batch.commit();
+  },
+
+  /**
    * Persisteix registres d'assistència per defecte (Present · +5) per a tots
    * els participants elegibles que encara no en tinguin. La lògica d'elegibilitat
    * i dels valors per defecte viu al mòdul de domini

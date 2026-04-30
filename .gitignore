@@ -36,3 +36,6 @@ src/**/*.test.js
 _smoke-randomteams.mts
 _smoke.mts
 smoke.ts
+
+# Sandbox temporals (TMPDIR / node compile cache)
+.tmp/
