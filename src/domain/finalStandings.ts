@@ -123,7 +123,57 @@ export function computeFinalStandings(
  * Comprova si tots els matches "jugables" tenen guanyador.
  * Un match és jugable si té els dos equips assignats (teamBId != null).
  * Els byes (teamBId = null) ja tenen winner prefixat.
+ *
+ * Per a empats explícits a fase de grups (winnerTeamId = null amb scoreA == scoreB)
+ * també considerem el match com a "decidit", ja que la classificació ja queda
+ * determinada (cada equip suma 1 punt).
  */
 export function areAllMatchesDecided(matches: Match[]): boolean {
-  return matches.every((m) => m.winnerTeamId !== null || m.teamBId === null);
+  return matches.every(
+    (m) =>
+      m.winnerTeamId !== null ||
+      m.teamBId === null ||
+      (m.phase === "group" &&
+        m.scoreA != null &&
+        m.scoreB != null &&
+        m.scoreA === m.scoreB)
+  );
+}
+
+/**
+ * Posicions finals per al format "Només lligueta".
+ *
+ * Suma els punts de tots els matches de fase de grup (3 per victòria,
+ * 1 per empat) i resol empats amb posicions denses (1, 1, 2, 3...).
+ *
+ * Els equips que no apareixen a cap match queden amb 0 punts (a l'última
+ * posició empatats amb la resta sense punts).
+ */
+export function computeLeagueFinalStandings(
+  teamIds: string[],
+  matches: Match[]
+): FinalStanding[] {
+  const points = new Map<string, number>(teamIds.map((id) => [id, 0]));
+  for (const m of matches) {
+    if (m.phase !== "group") continue;
+    if (!m.teamAId || !m.teamBId) continue;
+    if (m.winnerTeamId === m.teamAId) {
+      points.set(m.teamAId, (points.get(m.teamAId) ?? 0) + 3);
+    } else if (m.winnerTeamId === m.teamBId) {
+      points.set(m.teamBId, (points.get(m.teamBId) ?? 0) + 3);
+    } else if (
+      m.winnerTeamId === null &&
+      m.scoreA != null &&
+      m.scoreB != null &&
+      m.scoreA === m.scoreB
+    ) {
+      points.set(m.teamAId, (points.get(m.teamAId) ?? 0) + 1);
+      points.set(m.teamBId, (points.get(m.teamBId) ?? 0) + 1);
+    }
+  }
+  const inputs = teamIds.map((teamId) => ({
+    teamId,
+    score: points.get(teamId) ?? 0,
+  }));
+  return assignDensePositions(inputs);
 }

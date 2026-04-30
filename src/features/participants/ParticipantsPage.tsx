@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "@/ui/PageHeader";
 import { Badge, Button, ErrorMessage, Field, Input } from "@/ui/forms";
+import { useDialog } from "@/ui/dialog/useDialog";
 import { participantsRepo } from "@/data";
 import type { Participant } from "@/domain/types";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import { useAuth, hasRole } from "@/features/auth/useAuth";
 
 export function ParticipantsPage() {
+  const dialog = useDialog();
   const { currentSeason } = useSeasons();
   const { appUser } = useAuth();
   const canWrite = hasRole(appUser, ["admin", "superadmin"]);
@@ -82,11 +84,18 @@ export function ParticipantsPage() {
 
   async function handleRename(p: Participant) {
     if (!canWrite || !currentSeason) return;
-    const next = window.prompt("Nou nom:", p.name);
-    if (!next || next.trim() === p.name) return;
+    const next = await dialog.prompt({
+      title: "Reanomenar participant",
+      label: "Nou nom",
+      defaultValue: p.name,
+      required: true,
+    });
+    if (next == null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === p.name) return;
     try {
       await participantsRepo.update(currentSeason.id, p.id, {
-        name: next.trim(),
+        name: trimmed,
       });
       await load();
     } catch (e) {
@@ -96,7 +105,12 @@ export function ParticipantsPage() {
 
   async function handleRemove(p: Participant) {
     if (!canWrite || !currentSeason) return;
-    const ok = window.confirm(`Eliminar ${p.name}? Aquesta acció és irreversible.`);
+    const ok = await dialog.confirm({
+      title: "Eliminar participant",
+      message: `Eliminar ${p.name}? Aquesta acció és irreversible.`,
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
     if (!ok) return;
     try {
       await participantsRepo.remove(currentSeason.id, p.id);

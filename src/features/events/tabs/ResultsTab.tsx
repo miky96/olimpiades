@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, ErrorMessage } from "@/ui/forms";
+import { useDialog } from "@/ui/dialog/useDialog";
 import { attendanceRepo, eventsRepo, matchesRepo } from "@/data";
 import type { Match, MatchPhase, Team } from "@/domain/types";
 import {
@@ -7,6 +8,7 @@ import {
   areAllMatchesDecided,
   calculateEventPoints,
   computeFinalStandings,
+  computeLeagueFinalStandings,
   generateFirstRoundBracket,
   groupStandings,
   nextPowerOfTwo,
@@ -42,6 +44,7 @@ const PHASE_LABELS: Record<MatchPhase, string> = {
 };
 
 export function ResultsTab({ data, readOnly, onChanged }: Props) {
+  const dialog = useDialog();
   const { currentSeason } = useSeasons();
   const { event, matches, teams, attendance, participants } = data;
   const seasonId = currentSeason?.id ?? "";
@@ -102,8 +105,15 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
   const hasGroupStage = groupMatches.length > 0;
   const groupStageComplete = hasGroupStage && areAllMatchesDecided(groupMatches);
   const bracketStarted = matches.some((m) => m.phase !== "group");
+  const isLeagueOnly = event.format === "league_only";
+  // Per a "només lligueta" no construïm bracket: la classificació de grup
+  // ja determina el guanyador.
   const canBuildBracketFromGroups =
-    editable && hasGroupStage && groupStageComplete && !bracketStarted;
+    editable &&
+    hasGroupStage &&
+    groupStageComplete &&
+    !bracketStarted &&
+    !isLeagueOnly;
 
   const defaultQualifiers = useMemo(() => {
     if (!canBuildBracketFromGroups) return [] as string[];
@@ -143,11 +153,13 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
   }, [selectedQualifiers]);
 
   const allDecided = matches.length > 0 && areAllMatchesDecided(matches);
-  const canFinalize =
-    editable &&
-    allDecided &&
-    hasFinalMatch &&
-    currentRoundMatches.every((m) => m.winnerTeamId);
+  // El format "només lligueta" finalitza directament quan s'han jugat
+  // tots els partits de la fase de grups (no hi ha cap final/bracket).
+  const canFinalize = editable && allDecided && (
+    isLeagueOnly
+      ? hasGroupStage && groupStageComplete
+      : hasFinalMatch && currentRoundMatches.every((m) => m.winnerTeamId)
+  );
 
   async function handleSetWinner(
     m: Match,
@@ -219,9 +231,12 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
 
   async function handleFinalize() {
     if (!canFinalize) return;
-    const ok = window.confirm(
-      "Finalitzar l'esdeveniment? Es calcularan i desaran les posicions i punts."
-    );
+    const ok = await dialog.confirm({
+      title: "Finalitzar esdeveniment",
+      message:
+        "Es calcularan i desaran les posicions i punts. Podràs reobrir-lo si cal.",
+      confirmLabel: "Finalitzar",
+    });
     if (!ok) return;
     setFinalizing(true);
     setError(null);
@@ -232,10 +247,10 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
         { participants, existing: attendance }
       );
 
-      const standings = computeFinalStandings(
-        teams.map((t) => t.id),
-        matches
-      );
+      const teamIds = teams.map((t) => t.id);
+      const standings = isLeagueOnly
+        ? computeLeagueFinalStandings(teamIds, matches)
+        : computeFinalStandings(teamIds, matches);
       const attendanceByParticipant = Object.fromEntries(
         fullAttendance.map((a) => [a.participantId, a])
       );
@@ -260,9 +275,12 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
 
   async function handleReopen() {
     if (readOnly) return;
-    const ok = window.confirm(
-      "Reobrir l'esdeveniment? Els punts es recalcularan quan el tornis a finalitzar."
-    );
+    const ok = await dialog.confirm({
+      title: "Reobrir esdeveniment",
+      message:
+        "Els punts es recalcularan quan el tornis a finalitzar. Vols continuar?",
+      confirmLabel: "Reobrir",
+    });
     if (!ok) return;
     try {
       await eventsRepo.update(seasonId, event.id, {
@@ -293,10 +311,12 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
       {PHASE_ORDER.map((phase) => {
         const list = matchesByPhase.get(phase);
         if (!list || list.length === 0) return null;
+        const sectionLabel =
+          phase === "group" && isLeagueOnly ? "Lligueta" : PHASE_LABELS[phase];
         return (
           <section key={phase} className="card">
             <div className="card-header">
-              <span>{PHASE_LABELS[phase]}</span>
+              <span>{sectionLabel}</span>
               {phase !== "group" ? (
                 <span className="text-xs font-normal subtle">
                   {list.length} partit{list.length === 1 ? "" : "s"}
@@ -314,6 +334,7 @@ export function ResultsTab({ data, readOnly, onChanged }: Props) {
                 selectionMode={canBuildBracketFromGroups}
                 selectedQualifiers={selectedQualifiers}
                 onToggleQualifier={toggleQualifier}
+                hideGroupTitle={isLeagueOnly}
               />
             ) : (
               <ul className="card-divide">
@@ -503,6 +524,7 @@ function GroupPhaseView({
   selectionMode,
   selectedQualifiers,
   onToggleQualifier,
+  hideGroupTitle = false,
 }: {
   matches: Match[];
   teams: Team[];
@@ -517,6 +539,7 @@ function GroupPhaseView({
   selectionMode: boolean;
   selectedQualifiers: Set<string>;
   onToggleQualifier: (teamId: string) => void;
+  hideGroupTitle?: boolean;
 }) {
   const byGroup = new Map<string, Match[]>();
   for (const m of matches) {
@@ -540,12 +563,14 @@ function GroupPhaseView({
             : [];
         return (
           <div key={gid} className="space-y-3 px-4 py-4 sm:px-6">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-              <span className="grid h-6 w-6 place-items-center rounded-md bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
-                {gid.replace("group_", "").toUpperCase()}
-              </span>
-              Grup {gid.replace("group_", "").toUpperCase()}
-            </h3>
+            {hideGroupTitle ? null : (
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+                <span className="grid h-6 w-6 place-items-center rounded-md bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
+                  {gid.replace("group_", "").toUpperCase()}
+                </span>
+                Grup {gid.replace("group_", "").toUpperCase()}
+              </h3>
+            )}
             <ul className="divide-y divide-slate-200/70 overflow-hidden rounded-xl border border-slate-200/70 dark:divide-slate-800/70 dark:border-slate-800/70">
               {gMatches.map((m) => {
                 const teamA = m.teamAId ? teamById.get(m.teamAId) : null;

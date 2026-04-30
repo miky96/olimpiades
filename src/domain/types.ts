@@ -33,7 +33,8 @@ export interface Participant {
 export type EventFormat =
   | "single_match"
   | "bracket"
-  | "group_stage_bracket";
+  | "group_stage_bracket"
+  | "league_only";
 
 export type EventStatus = "draft" | "in_progress" | "finished";
 

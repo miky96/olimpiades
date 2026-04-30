@@ -1,3 +1,4 @@
+import { forwardRef, type ForwardedRef } from "react";
 import type {
   ButtonHTMLAttributes,
   HTMLAttributes,
@@ -20,10 +21,13 @@ export function Field(
   );
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
+export const Input = forwardRef(function Input(
+  props: InputHTMLAttributes<HTMLInputElement>,
+  ref: ForwardedRef<HTMLInputElement>
+) {
   const { className = "", ...rest } = props;
-  return <input className={`input ${className}`} {...rest} />;
-}
+  return <input ref={ref} className={`input ${className}`} {...rest} />;
+});
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   const { className = "", children, ...rest } = props;
@@ -59,7 +63,10 @@ const sizes: Record<ButtonSize, string> = {
   lg: "px-5 py-2.5 text-sm",
 };
 
-export function Button(props: ButtonProps) {
+export const Button = forwardRef(function Button(
+  props: ButtonProps,
+  ref: ForwardedRef<HTMLButtonElement>
+) {
   const {
     variant = "primary",
     size = "md",
@@ -69,12 +76,13 @@ export function Button(props: ButtonProps) {
   } = props;
   return (
     <button
+      ref={ref}
       type={type}
       className={`inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-all duration-150 focus:outline-none focus-visible:ring-4 disabled:cursor-not-allowed ${sizes[size]} ${variants[variant]} ${className}`}
       {...rest}
     />
   );
-}
+});
 
 export function ErrorMessage({ children }: { children: React.ReactNode }) {
   if (!children) return null;

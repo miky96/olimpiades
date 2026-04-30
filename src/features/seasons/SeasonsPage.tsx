@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { PageHeader } from "@/ui/PageHeader";
 import { Badge, Button, ErrorMessage, Field, Input } from "@/ui/forms";
+import { useDialog } from "@/ui/dialog/useDialog";
 import { seasonsRepo } from "@/data";
 import { useSeasons } from "./useSeasons";
 
 export function SeasonsPage() {
+  const dialog = useDialog();
   const { seasons, currentSeason, loading, error, refresh, selectSeason } =
     useSeasons();
   const [name, setName] = useState("");
@@ -43,17 +45,28 @@ export function SeasonsPage() {
   }
 
   async function handleArchive(seasonId: string) {
-    const ok = window.confirm(
-      "Segur que vols arxivar aquesta temporada? Un cop arxivada no es pot editar."
-    );
+    const ok = await dialog.confirm({
+      title: "Arxivar temporada",
+      message:
+        "Segur que vols arxivar aquesta temporada? Un cop arxivada no es pot editar.",
+      confirmLabel: "Arxivar",
+      tone: "danger",
+    });
     if (!ok) return;
     try {
       await seasonsRepo.archive(seasonId, new Date().toISOString());
       await refresh();
-      window.alert("Temporada arxivada. Fins a la pròxima!");
+      await dialog.alert({
+        title: "Temporada arxivada",
+        message: "Fins a la pròxima!",
+      });
     } catch (err) {
       console.error(err);
-      window.alert("No s'ha pogut arxivar la temporada.");
+      await dialog.alert({
+        title: "No s'ha pogut arxivar",
+        message: "Torna-ho a provar d'aquí a una estona.",
+        tone: "danger",
+      });
     }
   }
 

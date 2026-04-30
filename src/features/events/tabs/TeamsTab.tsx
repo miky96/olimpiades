@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Badge, Button, ErrorMessage, Field, Input, Select } from "@/ui/forms";
+import { useDialog } from "@/ui/dialog/useDialog";
 import { competitionRepo, matchesRepo, teamsRepo, eventsRepo } from "@/data";
 import type { Participant, Team } from "@/domain/types";
 import { competition } from "@/domain";
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function TeamsTab({ data, readOnly, onChanged }: Props) {
+  const dialog = useDialog();
   const { currentSeason } = useSeasons();
   const { event, teams, participants } = data;
   const seasonId = currentSeason?.id ?? "";
@@ -73,27 +75,45 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
 
   async function handleRenameTeam(team: Team) {
     if (!canEdit) return;
-    const next = window.prompt("Nou nom de l'equip:", team.name);
-    if (!next || next.trim() === team.name) return;
+    const next = await dialog.prompt({
+      title: "Reanomenar equip",
+      label: "Nou nom de l'equip",
+      defaultValue: team.name,
+      required: true,
+    });
+    if (next == null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === team.name) return;
     try {
-      await teamsRepo.update(seasonId, event.id, team.id, { name: next.trim() });
+      await teamsRepo.update(seasonId, event.id, team.id, { name: trimmed });
       await onChanged();
     } catch (err) {
       console.error(err);
-      window.alert("No s'ha pogut canviar el nom.");
+      await dialog.alert({
+        title: "No s'ha pogut canviar el nom",
+        tone: "danger",
+      });
     }
   }
 
   async function handleRemoveTeam(team: Team) {
     if (!canEdit) return;
-    const ok = window.confirm(`Eliminar l'equip "${team.name}"?`);
+    const ok = await dialog.confirm({
+      title: "Eliminar equip",
+      message: `Eliminar l'equip "${team.name}"?`,
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
     if (!ok) return;
     try {
       await teamsRepo.remove(seasonId, event.id, team.id);
       await onChanged();
     } catch (err) {
       console.error(err);
-      window.alert("No s'ha pogut eliminar l'equip.");
+      await dialog.alert({
+        title: "No s'ha pogut eliminar l'equip",
+        tone: "danger",
+      });
     }
   }
 
@@ -138,9 +158,16 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
       setInitError('El format "Lligueta + bracket" necessita almenys 4 equips.');
       return;
     }
-    const ok = window.confirm(
-      "Iniciar la competició? Un cop iniciada, els equips queden bloquejats."
-    );
+    if (event.format === "league_only" && eligibleTeams.length < 2) {
+      setInitError('El format "Només lligueta" necessita almenys 2 equips.');
+      return;
+    }
+    const ok = await dialog.confirm({
+      title: "Iniciar competició",
+      message:
+        "Un cop iniciada, els equips queden bloquejats. Vols continuar?",
+      confirmLabel: "Iniciar",
+    });
     if (!ok) return;
     setInitBusy(true);
     try {
@@ -181,9 +208,13 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
 
   async function handleResetCompetition() {
     if (readOnly || event.status !== "in_progress") return;
-    const ok = window.confirm(
-      "Reiniciar la competició? S'eliminaran tots els partits i podràs canviar els equips."
-    );
+    const ok = await dialog.confirm({
+      title: "Reiniciar competició",
+      message:
+        "S'eliminaran tots els partits i podràs canviar els equips. Vols continuar?",
+      confirmLabel: "Reiniciar",
+      tone: "danger",
+    });
     if (!ok) return;
     try {
       await matchesRepo.clearAll(seasonId, event.id);
@@ -191,7 +222,10 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
       await onChanged();
     } catch (err) {
       console.error(err);
-      window.alert("No s'ha pogut reiniciar la competició.");
+      await dialog.alert({
+        title: "No s'ha pogut reiniciar la competició",
+        tone: "danger",
+      });
     }
   }
 

@@ -2,15 +2,22 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/ui/PageHeader";
 import { Badge, Button, ErrorMessage, Field, Input, Select } from "@/ui/forms";
+import { useDialog } from "@/ui/dialog/useDialog";
 import { eventsRepo } from "@/data";
 import type { EventFormat, OlimpiadaEvent } from "@/domain/types";
-import { formatLabels } from "@/domain/formatLabels";
+import { formatDescriptions, formatLabels } from "@/domain/formatLabels";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import { useAuth, hasRole } from "@/features/auth/useAuth";
 
-const FORMATS: EventFormat[] = ["single_match", "bracket", "group_stage_bracket"];
+const FORMATS: EventFormat[] = [
+  "single_match",
+  "bracket",
+  "group_stage_bracket",
+  "league_only",
+];
 
 export function EventsPage() {
+  const dialog = useDialog();
   const { currentSeason } = useSeasons();
   const { appUser } = useAuth();
   const canWrite = hasRole(appUser, ["admin", "superadmin"]);
@@ -96,21 +103,29 @@ export function EventsPage() {
   async function handleRemove(ev: OlimpiadaEvent) {
     if (!canWrite || !currentSeason) return;
     if (ev.status !== "draft") {
-      window.alert(
-        "Només es poden eliminar esdeveniments en esborrany. Els que ja han començat s'han de finalitzar."
-      );
+      await dialog.alert({
+        title: "No es pot eliminar",
+        message:
+          "Només es poden eliminar esdeveniments en esborrany. Els que ja han començat s'han de finalitzar.",
+      });
       return;
     }
-    const ok = window.confirm(
-      `Eliminar l'esdeveniment "${ev.name || ev.sport}"? Aquesta acció és irreversible.`
-    );
+    const ok = await dialog.confirm({
+      title: "Eliminar esdeveniment",
+      message: `Eliminar l'esdeveniment "${ev.name || ev.sport}"? Aquesta acció és irreversible.`,
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
     if (!ok) return;
     try {
       await eventsRepo.remove(currentSeason.id, ev.id);
       await load();
     } catch (err) {
       console.error(err);
-      window.alert("No s'ha pogut eliminar l'esdeveniment.");
+      await dialog.alert({
+        title: "No s'ha pogut eliminar l'esdeveniment",
+        tone: "danger",
+      });
     }
   }
 
@@ -168,6 +183,9 @@ export function EventsPage() {
                   </option>
                 ))}
               </Select>
+              <p className="mt-1 text-xs subtle">
+                {formatDescriptions[format]}
+              </p>
             </Field>
             {format === "group_stage_bracket" ? (
               <Field label="Mida de grup">
