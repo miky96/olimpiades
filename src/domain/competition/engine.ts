@@ -6,6 +6,7 @@
 import type { EventFormat, EventFormatConfig, Match } from "../types";
 import { generateFirstRoundBracket } from "./bracket";
 import { generateGroupStage, type Group } from "./groupStage";
+import { generateLeagueOnly } from "./leagueOnly";
 import { generateSingleMatch } from "./singleMatch";
 
 export interface InitCompetitionResult {
@@ -23,9 +24,11 @@ export interface InitCompetitionOptions {
 
 /**
  * Inicialitza la competició segons el format escollit.
- * - single_match       → 1 partit únic.
- * - bracket            → primera ronda de l'eliminatòria.
- * - group_stage_bracket→ tots els matches round-robin de la fase de grups.
+ * - single_match        → 1 partit únic.
+ * - bracket             → primera ronda de l'eliminatòria.
+ * - group_stage_bracket → tots els matches round-robin de la fase de grups.
+ * - league_only         → un sol grup amb tots els equips, round-robin sencer
+ *                         (no hi ha eliminatòria posterior).
  */
 export function initCompetition(
   format: EventFormat,
@@ -52,6 +55,14 @@ export function initCompetition(
       const { groups, matches } = generateGroupStage(opts.teamIds, {
         eventId: opts.eventId,
         groupSize,
+        rng: opts.rng,
+        makeId: opts.makeId,
+      });
+      return { matches, groups };
+    }
+    case "league_only": {
+      const { groups, matches } = generateLeagueOnly(opts.teamIds, {
+        eventId: opts.eventId,
         rng: opts.rng,
         makeId: opts.makeId,
       });

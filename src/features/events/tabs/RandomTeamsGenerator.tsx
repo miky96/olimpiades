@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
+import { useDialog } from "@/ui/dialog/useDialog";
 import { teamsRepo } from "@/data";
 import {
   generateRandomTeams,
@@ -23,6 +24,7 @@ export function RandomTeamsGenerator({
   attendance,
   onGenerated,
 }: Props) {
+  const dialog = useDialog();
   const present = useMemo(
     () => selectPresentParticipants(participants, attendance),
     [participants, attendance]
@@ -89,9 +91,11 @@ export function RandomTeamsGenerator({
       );
       return;
     }
-    const ok = window.confirm(
-      `Generar ${teamCount} equips aleatoris amb ${total} participants presents?`
-    );
+    const ok = await dialog.confirm({
+      title: "Generar equips aleatoris",
+      message: `Es crearan ${teamCount} equips amb els ${total} participants presents. Vols continuar?`,
+      confirmLabel: "Generar",
+    });
     if (!ok) return;
     setBusy(true);
     try {

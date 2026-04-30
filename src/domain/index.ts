@@ -8,6 +8,7 @@ export * from "./formatLabels";
 export * as competition from "./competition/engine";
 export * from "./competition/bracket";
 export * from "./competition/groupStage";
+export * from "./competition/leagueOnly";
 export * from "./competition/singleMatch";
 export * from "./competition/shuffle";
 export * from "./competition/randomTeams";

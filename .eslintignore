@@ -14,3 +14,6 @@ vitest.config.d.ts
 vite.config.js
 vitest.config.js
 **/*.tsbuildinfo
+
+# Smoke test temporal (no es pot esborrar des del mount durant la sessió)
+/smoke.ts
