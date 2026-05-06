@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, ErrorMessage, Field, Input } from "@/ui/forms";
 import { useDialog } from "@/ui/dialog/useDialog";
 import { teamsRepo } from "@/data";
@@ -7,19 +7,45 @@ import {
   planTeamSizes,
 } from "@/domain/competition/randomTeams";
 import { selectPresentParticipants } from "@/domain/attendance";
-import type { AttendanceRecord, Participant } from "@/domain/types";
+import type {
+  AttendanceRecord,
+  EventFormat,
+  Participant,
+} from "@/domain/types";
 
 interface Props {
   seasonId: string;
   eventId: string;
+  format: EventFormat;
   participants: Participant[];
   attendance: AttendanceRecord[];
   onGenerated: () => Promise<void> | void;
 }
 
+/**
+ * Formats que requereixen exactament 2 equips. En aquests, el formulari
+ * fixa el nombre d'equips a 2 i la mida d'equip a la meitat (arrodonida
+ * amunt) dels participants presents.
+ */
+const TWO_TEAM_FORMATS: EventFormat[] = ["single_match", "rotating_singles"];
+
+/**
+ * Converteix l'string del control numèric a number per a la lògica de
+ * validació i preview. Retorna NaN si està buit o malformat (perquè els
+ * checks de "ha de ser enter" facin la feina sense que un input buit es
+ * converteixi silenciosament a 0).
+ */
+function parseIntInput(text: string): number {
+  const trimmed = text.trim();
+  if (trimmed === "") return Number.NaN;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : Number.NaN;
+}
+
 export function RandomTeamsGenerator({
   seasonId,
   eventId,
+  format,
   participants,
   attendance,
   onGenerated,
@@ -31,17 +57,40 @@ export function RandomTeamsGenerator({
   );
   const total = present.length;
 
-  const defaultTeamCount = total >= 4 ? 4 : Math.max(2, total);
+  const lockToTwoTeams = TWO_TEAM_FORMATS.includes(format);
+
+  const defaultTeamCount = lockToTwoTeams
+    ? 2
+    : total >= 4
+    ? 4
+    : Math.max(2, total);
   const defaultMembersPerTeam = Math.max(
     1,
     Math.ceil(total / Math.max(2, defaultTeamCount))
   );
 
-  const [teamCount, setTeamCount] = useState<number>(defaultTeamCount);
-  const [membersPerTeam, setMembersPerTeam] =
-    useState<number>(defaultMembersPerTeam);
+  // Mantenim l'estat com a string per permetre que l'usuari deixi el camp
+  // buit temporalment (mentre escriu) sense que es reompli amb un 0.
+  const [teamCountText, setTeamCountText] = useState<string>(
+    String(defaultTeamCount)
+  );
+  const [membersPerTeamText, setMembersPerTeamText] = useState<string>(
+    String(defaultMembersPerTeam)
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const teamCount = parseIntInput(teamCountText);
+  const membersPerTeam = parseIntInput(membersPerTeamText);
+
+  // Quan el format obliga a 2 equips, mantenim els camps sincronitzats
+  // automàticament amb el total de presents (l'usuari no pot tocar-ho,
+  // però els valors han d'actualitzar-se si canvia l'assistència).
+  useEffect(() => {
+    if (!lockToTwoTeams) return;
+    setTeamCountText("2");
+    setMembersPerTeamText(String(Math.max(1, Math.ceil(total / 2))));
+  }, [lockToTwoTeams, total]);
 
   const previewSizes = useMemo(() => {
     if (
@@ -133,24 +182,36 @@ export function RandomTeamsGenerator({
         Es repartiran els <strong>{total}</strong> participant
         {total === 1 ? "" : "s"} marcat{total === 1 ? "" : "s"} com a{" "}
         <em>present</em> a l'esdeveniment.
+        {lockToTwoTeams ? (
+          <>
+            {" "}Aquest format usa sempre <strong>2 equips</strong>; els
+            participants es reparteixen automàticament a parts iguals.
+          </>
+        ) : null}
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre d'equips">
           <Input
             type="number"
+            inputMode="numeric"
             min={2}
             step={1}
-            value={teamCount}
-            onChange={(e) => setTeamCount(Number(e.target.value))}
+            value={teamCountText}
+            onChange={(e) => setTeamCountText(e.target.value)}
+            disabled={lockToTwoTeams}
+            aria-readonly={lockToTwoTeams}
           />
         </Field>
         <Field label="Membres per equip (objectiu)">
           <Input
             type="number"
+            inputMode="numeric"
             min={1}
             step={1}
-            value={membersPerTeam}
-            onChange={(e) => setMembersPerTeam(Number(e.target.value))}
+            value={membersPerTeamText}
+            onChange={(e) => setMembersPerTeamText(e.target.value)}
+            disabled={lockToTwoTeams}
+            aria-readonly={lockToTwoTeams}
           />
         </Field>
       </div>

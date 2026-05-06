@@ -10,7 +10,14 @@
  *  - Empats: densos. Dos empatats a 1a reben 5 cadascun; el següent és 2a i rep 3.
  */
 
-import type { AttendanceRecord, FinalStanding, Team } from "./types";
+import type {
+  AttendanceRecord,
+  FinalStanding,
+  IndividualFinalStanding,
+  Match,
+  Team,
+} from "./types";
+import { computeRotatingStats } from "./competition/rotatingSingles";
 
 /** Punts segons posició final. */
 export function pointsForPosition(position: number): number {
@@ -32,6 +39,16 @@ export interface ParticipantPointsBreakdown {
   bonusPoints: number;
   penaltyPoints: number;
   total: number;
+  /**
+   * Punts acumulats als partits del format individual (3 per victòria, 0 per
+   * derrota). Només es desa per a `rotating_singles`. Informatiu, no es
+   * sumen al `total` perquè la posició final ja s'aplica via `positionPoints`.
+   */
+  matchPoints?: number;
+  /** Partits jugats (només `rotating_singles`). */
+  matchesPlayed?: number;
+  /** Partits guanyats (només `rotating_singles`). */
+  matchesWon?: number;
 }
 
 /**
@@ -110,4 +127,79 @@ export function sumPointsByParticipant(
     totals[b.participantId] = (totals[b.participantId] ?? 0) + b.total;
   }
   return totals;
+}
+
+/**
+ * Calcula els punts per participant per al format `rotating_singles`.
+ *
+ * Diferències respecte a `calculateEventPoints`:
+ *  - La classificació és INDIVIDUAL (per participant), no per equip.
+ *  - Els participants jugadors reben `pointsForPosition(rang individual)`,
+ *    aplicant la regla 5/3/1 com a la resta de formats.
+ *  - A més, es desa el detall de partits jugats/guanyats i els punts de
+ *    partit (3/0) per a transparència, però aquests NO compten al total.
+ *  - Bonus i penalitzacions d'assistència es mantenen igual.
+ *  - Els participants apuntats que no han jugat cap partit reben només els
+ *    seus bonus/penalitzacions (sense punts de posició).
+ */
+export function calculateRotatingEventPoints(args: {
+  matches: Match[];
+  teams: Team[];
+  individualStandings: IndividualFinalStanding[];
+  attendance: Record<string, AttendanceRecord | undefined>;
+}): ParticipantPointsBreakdown[] {
+  const { matches, teams, individualStandings, attendance } = args;
+
+  const stats = computeRotatingStats(matches, teams);
+
+  // Mapa participantId → posició (per aplicar 5/3/1).
+  const positionByParticipant = new Map<string, number>();
+  for (const s of individualStandings) {
+    for (const pid of s.participantIds) {
+      positionByParticipant.set(pid, s.position);
+    }
+  }
+
+  const result: ParticipantPointsBreakdown[] = [];
+  const seen = new Set<string>();
+
+  for (const s of stats) {
+    seen.add(s.participantId);
+    const position =
+      positionByParticipant.get(s.participantId) ?? Number.POSITIVE_INFINITY;
+    const positionPoints = pointsForPosition(position);
+    const att = attendance[s.participantId];
+    const bonusPoints = att?.bonusPoints ?? 0;
+    const penaltyPoints = att?.penaltyPoints ?? 0;
+    result.push({
+      participantId: s.participantId,
+      positionPoints,
+      bonusPoints,
+      penaltyPoints,
+      total: positionPoints + bonusPoints + penaltyPoints,
+      matchPoints: s.matchPoints,
+      matchesPlayed: s.played,
+      matchesWon: s.won,
+    });
+  }
+
+  // Participants apuntats que no han jugat cap partit: només bonus/penalització.
+  for (const [participantId, record] of Object.entries(attendance)) {
+    if (seen.has(participantId)) continue;
+    if (!record) continue;
+    const bonusPoints = record.bonusPoints ?? 0;
+    const penaltyPoints = record.penaltyPoints ?? 0;
+    result.push({
+      participantId,
+      positionPoints: 0,
+      bonusPoints,
+      penaltyPoints,
+      total: bonusPoints + penaltyPoints,
+      matchPoints: 0,
+      matchesPlayed: 0,
+      matchesWon: 0,
+    });
+  }
+
+  return result;
 }

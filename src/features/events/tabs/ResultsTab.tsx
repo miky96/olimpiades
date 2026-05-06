@@ -16,6 +16,7 @@ import {
 } from "@/domain";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
+import { RotatingSinglesView } from "./rotating/RotatingSinglesView";
 
 interface Props {
   data: EventData;
@@ -41,9 +42,24 @@ const PHASE_LABELS: Record<MatchPhase, string> = {
   final: "Final",
   third_place: "Tercer i quart",
   single: "Partit únic",
+  rotating: "Partit rotatiu",
 };
 
-export function ResultsTab({ data, readOnly, onChanged }: Props) {
+/**
+ * Punt d'entrada per a la pestanya "Resultats". Despatxa al component
+ * adequat segons el format de l'esdeveniment. Així evitem barrejar la
+ * lògica del format rotatiu (individual) amb la dels formats per equips
+ * (single_match, bracket, group_stage_bracket, league_only) i mantenim
+ * cada flux més simple de mantenir i testejar per separat.
+ */
+export function ResultsTab(props: Props) {
+  if (props.data.event.format === "rotating_singles") {
+    return <RotatingSinglesView {...props} />;
+  }
+  return <TeamFormatsResultsTab {...props} />;
+}
+
+function TeamFormatsResultsTab({ data, readOnly, onChanged }: Props) {
   const dialog = useDialog();
   const { currentSeason } = useSeasons();
   const { event, matches, teams, attendance, participants } = data;
