@@ -34,7 +34,8 @@ export type EventFormat =
   | "single_match"
   | "bracket"
   | "group_stage_bracket"
-  | "league_only";
+  | "league_only"
+  | "rotating_singles";
 
 export type EventStatus = "draft" | "in_progress" | "finished";
 
@@ -57,6 +58,11 @@ export interface OlimpiadaEvent {
   name?: string;
   /** Es persisteix quan es finalitza l'esdeveniment. */
   finalStandings?: FinalStanding[];
+  /**
+   * Classificació individual final (només formats per participant com
+   * `rotating_singles`). En aquests formats, `finalStandings` queda buit.
+   */
+  individualFinalStandings?: IndividualFinalStanding[];
   /** Desglossament de punts per participant, guardat al finalitzar. */
   pointsBreakdown?: {
     participantId: string;
@@ -64,6 +70,16 @@ export interface OlimpiadaEvent {
     bonusPoints: number;
     penaltyPoints: number;
     total: number;
+    /**
+     * Punts acumulats als partits del format individual (3 per victòria, 0
+     * per derrota). Només informatiu; només es desa per a formats com
+     * `rotating_singles`.
+     */
+    matchPoints?: number;
+    /** Partits jugats pel participant en formats individuals. */
+    matchesPlayed?: number;
+    /** Partits guanyats pel participant en formats individuals. */
+    matchesWon?: number;
   }[];
 }
 
@@ -112,7 +128,8 @@ export type MatchPhase =
   | "quarter"
   | "semi"
   | "final"
-  | "third_place";
+  | "third_place"
+  | "rotating";
 
 export interface Match {
   id: string;
@@ -137,4 +154,15 @@ export interface FinalStanding {
   position: number;
   /** Equips que comparteixen aquesta posició (més d'un si hi ha empat). */
   teamIds: string[];
+}
+
+/**
+ * Classificació final per participant (només per a formats individuals com
+ * `rotating_singles`, on l'equip canvia entre rondes).
+ */
+export interface IndividualFinalStanding {
+  /** Posició final amb empats densos (1, 1, 2, ...). */
+  position: number;
+  /** Participants que comparteixen aquesta posició. */
+  participantIds: string[];
 }

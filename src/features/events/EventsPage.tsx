@@ -11,6 +11,7 @@ import { useAuth, hasRole } from "@/features/auth/useAuth";
 
 const FORMATS: EventFormat[] = [
   "single_match",
+  "rotating_singles",
   "bracket",
   "group_stage_bracket",
   "league_only",

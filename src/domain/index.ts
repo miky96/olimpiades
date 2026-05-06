@@ -10,5 +10,6 @@ export * from "./competition/bracket";
 export * from "./competition/groupStage";
 export * from "./competition/leagueOnly";
 export * from "./competition/singleMatch";
+export * from "./competition/rotatingSingles";
 export * from "./competition/shuffle";
 export * from "./competition/randomTeams";

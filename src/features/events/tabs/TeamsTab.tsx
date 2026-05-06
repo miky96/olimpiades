@@ -154,6 +154,12 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
       setInitError('El format "Partit únic" requereix exactament 2 equips.');
       return;
     }
+    if (event.format === "rotating_singles" && eligibleTeams.length !== 2) {
+      setInitError(
+        'El format "Partits rotatius" requereix exactament 2 equips inicials. Després podràs regenerar-los entre rondes.'
+      );
+      return;
+    }
     if (event.format === "group_stage_bracket" && eligibleTeams.length < 4) {
       setInitError('El format "Lligueta + bracket" necessita almenys 4 equips.');
       return;
@@ -235,6 +241,7 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
         <RandomTeamsGenerator
           seasonId={seasonId}
           eventId={event.id}
+          format={event.format}
           participants={participants}
           attendance={data.attendance}
           onGenerated={onChanged}

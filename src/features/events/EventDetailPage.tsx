@@ -44,7 +44,9 @@ export function EventDetailPage() {
   const [data, setData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabKey>("teams");
+  // Per defecte obrim a "Assistència": el flux natural és primer marcar
+  // qui ha vingut i després crear els equips a partir d'aquesta llista.
+  const [tab, setTab] = useState<TabKey>("attendance");
 
   const seasonId = currentSeason?.id;
 
@@ -149,14 +151,14 @@ export function EventDetailPage() {
         role="tablist"
         className="flex gap-1 rounded-full bg-slate-100/80 p-1 text-sm dark:bg-slate-800/60"
       >
-        <TabButton active={tab === "teams"} onClick={() => setTab("teams")}>
-          Equips
-        </TabButton>
         <TabButton
           active={tab === "attendance"}
           onClick={() => setTab("attendance")}
         >
           Assistència
+        </TabButton>
+        <TabButton active={tab === "teams"} onClick={() => setTab("teams")}>
+          Equips
         </TabButton>
         <TabButton active={tab === "results"} onClick={() => setTab("results")}>
           Resultats

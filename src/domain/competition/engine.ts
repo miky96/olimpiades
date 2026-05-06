@@ -7,6 +7,7 @@ import type { EventFormat, EventFormatConfig, Match } from "../types";
 import { generateFirstRoundBracket } from "./bracket";
 import { generateGroupStage, type Group } from "./groupStage";
 import { generateLeagueOnly } from "./leagueOnly";
+import { generateInitialRotatingMatch } from "./rotatingSingles";
 import { generateSingleMatch } from "./singleMatch";
 
 export interface InitCompetitionResult {
@@ -29,6 +30,8 @@ export interface InitCompetitionOptions {
  * - group_stage_bracket → tots els matches round-robin de la fase de grups.
  * - league_only         → un sol grup amb tots els equips, round-robin sencer
  *                         (no hi ha eliminatòria posterior).
+ * - rotating_singles    → primer partit (round 1) entre 2 equips. Les rondes
+ *                         següents es creen per acció de l'admin via UI.
  */
 export function initCompetition(
   format: EventFormat,
@@ -68,6 +71,13 @@ export function initCompetition(
       });
       return { matches, groups };
     }
+    case "rotating_singles":
+      return {
+        matches: generateInitialRotatingMatch(opts.teamIds, {
+          eventId: opts.eventId,
+          makeId: opts.makeId,
+        }),
+      };
     default: {
       const _exhaustive: never = format;
       throw new Error(`Format no suportat: ${_exhaustive}`);
