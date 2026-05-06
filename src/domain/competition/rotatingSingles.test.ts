@@ -155,19 +155,19 @@ describe("rotatingSingles — estadístiques individuals", () => {
   });
 
   it("suma punts a través de rondes amb composició d'equip diferent", () => {
-    // Round 1: equips A=[p1,p2] vs B=[p3,p4], guanya A.
-    // Round 2: equips A=[p1,p3] vs B=[p2,p4], guanya B.
-    // p1: 1 victòria + 1 derrota = 3 + 0 = 3 punts (jugats: 2)
-    // p4: 1 derrota + 1 victòria = 0 + 3 = 3 punts (jugats: 2)
-    // p2: 1 victòria + 1 derrota = 3 punts (jugats: 2)
-    // p3: 1 derrota + 1 victòria = 3 punts (jugats: 2)
+    // Round 1: equips A1=[p1,p2] vs B1=[p3,p4], guanya A1.
+    // Round 2: equips A2=[p3,p4] vs B2=[p1,p2], guanya A2.
+    //   → els IDs d'equip canvien entre rondes (A2 ≠ B1 tot i tenir els mateixos jugadors),
+    //     cosa que verifica que les estadístiques s'acumulen per participantId,
+    //     no per teamId.
+    // Resultat: cada jugador té 1 victòria + 1 derrota = 3 punts (jugats: 2).
     const teamsRound1: Team[] = [
       team("A1", ["p1", "p2"]),
       team("B1", ["p3", "p4"]),
     ];
     const teamsRound2: Team[] = [
-      team("A2", ["p1", "p3"]),
-      team("B2", ["p2", "p4"]),
+      team("A2", ["p3", "p4"]),
+      team("B2", ["p1", "p2"]),
     ];
     const matches: Match[] = [
       rmatch({
@@ -182,7 +182,7 @@ describe("rotatingSingles — estadístiques individuals", () => {
         round: 2,
         teamAId: "A2",
         teamBId: "B2",
-        winnerTeamId: "B2",
+        winnerTeamId: "A2",
       }),
     ];
     const stats = computeRotatingStats(matches, [

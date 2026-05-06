@@ -154,7 +154,6 @@ export function RandomTeamsGenerator({
         membersPerTeam,
       });
       for (const t of plan) {
-        // eslint-disable-next-line no-await-in-loop
         await teamsRepo.create(seasonId, eventId, {
           name: t.name,
           participantIds: t.participantIds,
