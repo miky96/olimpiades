@@ -5,7 +5,11 @@ import { Badge, Button, ErrorMessage, Field, Input, Select } from "@/ui/forms";
 import { useDialog } from "@/ui/dialog/useDialog";
 import { eventsRepo } from "@/data";
 import type { EventFormat, OlimpiadaEvent } from "@/domain/types";
-import { formatDescriptions, formatLabels } from "@/domain/formatLabels";
+import {
+  formatDescriptions,
+  formatLabels,
+  getEventFormatLabel,
+} from "@/domain/formatLabels";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import { useAuth, hasRole } from "@/features/auth/useAuth";
 
@@ -239,7 +243,7 @@ export function EventsPage() {
                     <StatusBadge status={ev.status} />
                   </div>
                   <p className="mt-0.5 text-xs subtle">
-                    {ev.date} · {formatLabels[ev.format]}
+                    {ev.date} · {getEventFormatLabel(ev)}
                   </p>
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-2">

@@ -4,6 +4,7 @@ import { useDialog } from "@/ui/dialog/useDialog";
 import { competitionRepo, matchesRepo, teamsRepo, eventsRepo } from "@/data";
 import type { Participant, Team } from "@/domain/types";
 import { competition } from "@/domain";
+import { isIndividualMode } from "@/domain/formatLabels";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
 import { RandomTeamsGenerator } from "./RandomTeamsGenerator";
@@ -21,6 +22,10 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
   const seasonId = currentSeason?.id ?? "";
   const isDraft = event.status === "draft";
   const canEdit = !readOnly && isDraft;
+  const individual = isIndividualMode(event.format, event.config);
+  // En mode individual fem servir "participants" als textos per coherència
+  // amb el que veu l'usuari (cada team és en realitat 1 participant).
+  const entityLabelPlural = individual ? "participants" : "equips";
 
   const [newName, setNewName] = useState("");
   const [newParticipantIds, setNewParticipantIds] = useState<string[]>([]);
@@ -147,7 +152,11 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
     setInitError(null);
     const eligibleTeams = teams.filter((t) => t.participantIds.length > 0);
     if (eligibleTeams.length < 2) {
-      setInitError("Es necessiten com a mínim 2 equips amb participants.");
+      setInitError(
+        individual
+          ? "Es necessiten com a mínim 2 participants."
+          : "Es necessiten com a mínim 2 equips amb participants."
+      );
       return;
     }
     if (event.format === "single_match" && eligibleTeams.length !== 2) {
@@ -161,17 +170,26 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
       return;
     }
     if (event.format === "group_stage_bracket" && eligibleTeams.length < 4) {
-      setInitError('El format "Lligueta + bracket" necessita almenys 4 equips.');
+      setInitError(
+        individual
+          ? 'El format "Lligueta + bracket" en mode individual necessita almenys 4 participants.'
+          : 'El format "Lligueta + bracket" necessita almenys 4 equips.'
+      );
       return;
     }
     if (event.format === "league_only" && eligibleTeams.length < 2) {
-      setInitError('El format "Només lligueta" necessita almenys 2 equips.');
+      setInitError(
+        individual
+          ? 'El format "Només lligueta" en mode individual necessita almenys 2 participants.'
+          : 'El format "Només lligueta" necessita almenys 2 equips.'
+      );
       return;
     }
     const ok = await dialog.confirm({
       title: "Iniciar competició",
-      message:
-        "Un cop iniciada, els equips queden bloquejats. Vols continuar?",
+      message: individual
+        ? "Un cop iniciada, els participants queden bloquejats. Vols continuar?"
+        : "Un cop iniciada, els equips queden bloquejats. Vols continuar?",
       confirmLabel: "Iniciar",
     });
     if (!ok) return;
@@ -216,8 +234,9 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
     if (readOnly || event.status !== "in_progress") return;
     const ok = await dialog.confirm({
       title: "Reiniciar competició",
-      message:
-        "S'eliminaran tots els partits i podràs canviar els equips. Vols continuar?",
+      message: individual
+        ? "S'eliminaran tots els partits i podràs canviar els participants. Vols continuar?"
+        : "S'eliminaran tots els partits i podràs canviar els equips. Vols continuar?",
       confirmLabel: "Reiniciar",
       tone: "danger",
     });
@@ -242,13 +261,14 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
           seasonId={seasonId}
           eventId={event.id}
           format={event.format}
+          config={event.config}
           participants={participants}
           attendance={data.attendance}
           onGenerated={onChanged}
         />
       ) : null}
 
-      {canEdit ? (
+      {canEdit && !individual ? (
         <section className="card card-pad">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest muted">
             Nou equip
@@ -308,10 +328,16 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
 
       <section className="card">
         <div className="card-header">
-          <span>Equips ({teams.length})</span>
+          <span>
+            {individual ? "Participants" : "Equips"} ({teams.length})
+          </span>
         </div>
         {teams.length === 0 ? (
-          <p className="p-6 text-sm muted">Encara no hi ha equips.</p>
+          <p className="p-6 text-sm muted">
+            {individual
+              ? "Encara no hi ha participants."
+              : "Encara no hi ha equips."}
+          </p>
         ) : (
           <ul className="card-divide">
             {teams.map((team) => (
@@ -322,13 +348,15 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
                   </p>
                   {canEdit ? (
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleRenameTeam(team)}
-                      >
-                        Reanomenar
-                      </Button>
+                      {individual ? null : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleRenameTeam(team)}
+                        >
+                          Reanomenar
+                        </Button>
+                      )}
                       <Button
                         variant="danger"
                         size="sm"
@@ -339,14 +367,16 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
                     </div>
                   ) : null}
                 </div>
-                <TeamMembers
-                  team={team}
-                  participantById={participantById}
-                  availableParticipants={availableParticipants}
-                  canEdit={canEdit}
-                  onAdd={(pid) => handleAddMember(team, pid)}
-                  onRemove={(pid) => handleRemoveMember(team, pid)}
-                />
+                {individual ? null : (
+                  <TeamMembers
+                    team={team}
+                    participantById={participantById}
+                    availableParticipants={availableParticipants}
+                    canEdit={canEdit}
+                    onAdd={(pid) => handleAddMember(team, pid)}
+                    onRemove={(pid) => handleRemoveMember(team, pid)}
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -359,8 +389,8 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
             Iniciar competició
           </h2>
           <p className="mb-4 text-sm muted">
-            Un cop iniciada, es generaran els partits i no podràs modificar els
-            equips. Podràs reiniciar-la si cal.
+            Un cop iniciada, es generaran els partits i no podràs modificar els{" "}
+            {entityLabelPlural}. Podràs reiniciar-la si cal.
           </p>
           {event.format === "group_stage_bracket" ? (
             <fieldset className="mb-4">
@@ -417,7 +447,8 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
                 Competició en curs
               </h2>
               <p className="mt-0.5 text-sm text-amber-800/90 dark:text-amber-100/80">
-                Si cal, pots reiniciar-la per tornar a configurar els equips.
+                Si cal, pots reiniciar-la per tornar a configurar els{" "}
+                {entityLabelPlural}.
               </p>
               <div className="mt-3">
                 <Button variant="danger" size="sm" onClick={handleResetCompetition}>
