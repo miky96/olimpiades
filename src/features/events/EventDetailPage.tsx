@@ -16,7 +16,7 @@ import type {
   Participant,
   Team,
 } from "@/domain/types";
-import { formatLabels } from "@/domain/formatLabels";
+import { getEventFormatLabel } from "@/domain/formatLabels";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import { useAuth, hasRole } from "@/features/auth/useAuth";
 import { TeamsTab } from "./tabs/TeamsTab";
@@ -140,7 +140,7 @@ export function EventDetailPage() {
         <PageHeader
           eyebrow={event.sport}
           title={event.name || event.sport}
-          description={`${event.date} · ${formatLabels[event.format]}`}
+          description={`${event.date} · ${getEventFormatLabel(event)}`}
           action={<EventStatusBadge status={event.status} />}
         />
       </div>

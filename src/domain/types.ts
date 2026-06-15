@@ -44,6 +44,13 @@ export interface EventFormatConfig {
   groupSize?: 3 | 4;
   /** Quants equips per grup passen a l'eliminatòria (per defecte 2). */
   qualifiersPerGroup?: number;
+  /**
+   * Mode individual: cada "equip" és un sol participant amb el nom del
+   * participant. Aplicable als formats `league_only` i `group_stage_bracket`.
+   * Internament reutilitzem l'estructura `Team` (cada team té 1 participant);
+   * la UI ho renderitza com a participants individuals.
+   */
+  individualMode?: boolean;
 }
 
 export interface OlimpiadaEvent {

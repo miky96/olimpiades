@@ -14,6 +14,7 @@ import {
   nextPowerOfTwo,
   phaseForRoundsToFinal,
 } from "@/domain";
+import { isIndividualMode } from "@/domain/formatLabels";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
 import { RotatingSinglesView } from "./rotating/RotatingSinglesView";
@@ -122,6 +123,7 @@ function TeamFormatsResultsTab({ data, readOnly, onChanged }: Props) {
   const groupStageComplete = hasGroupStage && areAllMatchesDecided(groupMatches);
   const bracketStarted = matches.some((m) => m.phase !== "group");
   const isLeagueOnly = event.format === "league_only";
+  const individual = isIndividualMode(event.format, event.config);
   // Per a "només lligueta" no construïm bracket: la classificació de grup
   // ja determina el guanyador.
   const canBuildBracketFromGroups =
@@ -351,6 +353,7 @@ function TeamFormatsResultsTab({ data, readOnly, onChanged }: Props) {
                 selectedQualifiers={selectedQualifiers}
                 onToggleQualifier={toggleQualifier}
                 hideGroupTitle={isLeagueOnly}
+                competitorLabel={individual ? "Participant" : "Equip"}
               />
             ) : (
               <ul className="card-divide">
@@ -383,8 +386,14 @@ function TeamFormatsResultsTab({ data, readOnly, onChanged }: Props) {
               >
                 {advancing
                   ? "Generant…"
-                  : `Generar bracket amb ${selectedQualifiers.size} equip${
-                      selectedQualifiers.size === 1 ? "" : "s"
+                  : `Generar bracket amb ${selectedQualifiers.size} ${
+                      individual
+                        ? selectedQualifiers.size === 1
+                          ? "participant"
+                          : "participants"
+                        : selectedQualifiers.size === 1
+                        ? "equip"
+                        : "equips"
                     }`}
               </Button>
               {selectedQualifiers.size >= 2 && startPhaseLabel ? (
@@ -403,7 +412,9 @@ function TeamFormatsResultsTab({ data, readOnly, onChanged }: Props) {
                 </span>
               ) : (
                 <span className="text-xs muted">
-                  Selecciona almenys 2 equips a les classificacions.
+                  {individual
+                    ? "Selecciona almenys 2 participants a les classificacions."
+                    : "Selecciona almenys 2 equips a les classificacions."}
                 </span>
               )}
             </div>
@@ -541,6 +552,7 @@ function GroupPhaseView({
   selectedQualifiers,
   onToggleQualifier,
   hideGroupTitle = false,
+  competitorLabel = "Equip",
 }: {
   matches: Match[];
   teams: Team[];
@@ -556,6 +568,7 @@ function GroupPhaseView({
   selectedQualifiers: Set<string>;
   onToggleQualifier: (teamId: string) => void;
   hideGroupTitle?: boolean;
+  competitorLabel?: string;
 }) {
   const byGroup = new Map<string, Match[]>();
   for (const m of matches) {
@@ -669,7 +682,7 @@ function GroupPhaseView({
                           Passa
                         </th>
                       ) : null}
-                      <th className="px-2 py-2">Equip</th>
+                      <th className="px-2 py-2">{competitorLabel}</th>
                       <th className="px-2 py-2 text-center">PJ</th>
                       <th className="px-2 py-2 text-center">G</th>
                       <th className="px-2 py-2 text-center">E</th>
