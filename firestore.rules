@@ -77,6 +77,13 @@ service cloud.firestore {
           allow write: if isActiveAdmin();
         }
 
+        // Rondes de puntuació del format `points_league_bracket`.
+        // Lectura pública (per al rànquing); escriptura només admins.
+        match /pointsRounds/{roundId} {
+          allow read: if true;
+          allow write: if isActiveAdmin();
+        }
+
         match /finalStandings/{docId} {
           allow read: if true;
           allow write: if isActiveAdmin();
