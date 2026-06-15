@@ -27,6 +27,7 @@ export function LoginPage() {
         { replace: true }
       );
     } catch {
+      // l'error ja es mostra via `error` del context
     } finally {
       setSubmitting(false);
     }
