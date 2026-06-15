@@ -33,11 +33,6 @@ export function suggestRotatingTeamSize(total: number): number {
  * Crea el següent partit del format rotating. Si `regenerate` és true, també
  * crea 2 equips nous amb els participants presents distribuïts a l'atzar.
  *
- * Simplificacions deliberades (MVP):
- *  - L'operació no és atòmica: si la creació dels teams reeixeix però la del
- *    match falla, queden teams "orfes". Ho considerem acceptable per ara
- *    perquè és recuperable manualment i poc probable. Si calgués atomicitat,
- *    es pot afegir un mètode al `competitionRepo`.
  */
 export async function addNextRotatingRound(
   params: AddNextRoundParams

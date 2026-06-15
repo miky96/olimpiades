@@ -5,5 +5,6 @@ export { eventsRepo } from "./eventsRepo";
 export { teamsRepo } from "./teamsRepo";
 export { attendanceRepo } from "./attendanceRepo";
 export { matchesRepo } from "./matchesRepo";
+export { pointsRoundsRepo } from "./pointsRoundsRepo";
 export { usersRepo } from "./usersRepo";
 export { competitionRepo } from "./competitionRepo";

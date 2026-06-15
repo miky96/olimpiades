@@ -11,7 +11,6 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Ja autenticat? redirigim.
   if (firebaseUser && appUser) {
     const redirectTo =
       (location.state as { from?: string } | null)?.from ?? "/classificacio";

@@ -1,15 +1,5 @@
 /**
  * Generador d'equips aleatori.
- *
- * Donat un conjunt de participants i una mida d'equips desitjada, reparteix
- * els participants en N equips de manera aleatòria amb distribució flexible:
- * - Mai descarta cap participant.
- * - Si N × M < total, els sobrants es reparteixen en round-robin (alguns
- *   equips queden amb M+1 o més).
- * - Si N × M > total, es distribueix el més uniformement possible (alguns
- *   equips queden amb M-1 o menys).
- *
- * Mòdul **pur**: no depèn de Firebase ni de cap adaptador.
  */
 
 import { shuffle } from "./shuffle";
@@ -62,14 +52,13 @@ export function planTeamSizes(
 
   const target = teamCount * membersPerTeam;
   if (total <= target) {
-    // Dèficit o just: distribució uniforme floor / floor+1.
     const base = Math.floor(total / teamCount);
     const extra = total % teamCount;
     return Array.from({ length: teamCount }, (_, i) =>
       i < extra ? base + 1 : base
     );
   }
-  // Superàvit: cada equip rep M, surplus en round-robin.
+
   const sizes = new Array<number>(teamCount).fill(membersPerTeam);
   let surplus = total - target;
   let i = 0;

@@ -2,11 +2,6 @@
  * Valors per defecte de bonus i penalització segons l'estat d'assistència.
  * L'admin pot sobreescriure'ls per cas concret a la UI.
  *
- * Aquests valors reflecteixen les regles base (veure docs/decisions.md):
- *  - Assistir → bonus +5
- *  - Arribar tard → +5 de bonus però -1 de penalització (exemple)
- *  - Absent avisant → 0 / 0 (no penalitzat)
- *  - Absent sense avisar → 0 / -3
  */
 
 import type { AttendanceStatus } from "./types";

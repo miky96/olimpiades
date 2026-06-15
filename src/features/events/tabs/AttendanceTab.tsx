@@ -25,21 +25,6 @@ interface Props {
   onChanged: () => Promise<void> | void;
 }
 
-/**
- * Pestanya d'assistència optimitzada per a registre massiu (desenes/centenars
- * de participants). Patró d'ús esperat:
- *
- *  1. Tothom comença com a "Present" per defecte (és la majoria de casos).
- *  2. L'admin selecciona els que falten/arriben tard/etc. tocant múltiples
- *     files d'un cop.
- *  3. Aplica una acció massiva des de la barra inferior (p.ex. "Tard").
- *  4. Si cal sobreescriure bonus/penalització/comentari per algú concret,
- *     obre "Detalls" en aquella fila.
- *  5. Desa tot d'un cop (writeBatch a Firestore).
- *
- * Disseny en una sola vista (no separa mòbil/desktop): la llista compacta
- * amb seccions plegables funciona bé en ambdós.
- */
 export function AttendanceTab({ data, readOnly, onChanged }: Props) {
   const { currentSeason } = useSeasons();
   const { event, participants, attendance, teams } = data;
@@ -58,7 +43,6 @@ export function AttendanceTab({ data, readOnly, onChanged }: Props) {
 
   const [rows, setRows] = useState<Row[]>(initialRows);
   const [lastKey, setLastKey] = useState("");
-  // Re-sync amb dades remotes quan canvien (mateix patró que abans).
   const currentKey = `${attendance.length}-${eligibleParticipants.length}-${event.id}`;
   if (currentKey !== lastKey) {
     setRows(initialRows);
@@ -245,9 +229,6 @@ export function AttendanceTab({ data, readOnly, onChanged }: Props) {
         <div className="space-y-3">
           {STATUS_ORDER.map((status) => {
             const sectionRows = rowsByStatus[status];
-            // Si s'està filtrant i una secció queda buida, l'amaguem per
-            // evitar soroll visual. Si no hi ha filtre, mostrem-la (encara
-            // que estigui buida) perquè el target de drop massiu és visible.
             if (search && sectionRows.length === 0) return null;
             const sectionSelectedCount = sectionRows.reduce(
               (acc, r) => acc + (selected.has(r.participant.id) ? 1 : 0),

@@ -40,7 +40,6 @@ export function AttendanceDetailDialog({
   const [penalty, setPenalty] = useState<number>(row.penaltyPoints);
   const [comment, setComment] = useState<string>(row.comment);
 
-  // Tanca amb Esc i bloqueja scroll del body, igual que DialogProvider.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -60,9 +59,6 @@ export function AttendanceDetailDialog({
   function handleStatusChange(next: AttendanceStatus) {
     const d = defaultsFor(next);
     setStatus(next);
-    // Quan canvies l'estat des del dialog, és més útil començar amb els
-    // defaults d'aquell estat; si l'usuari volia conservar valors específics,
-    // els pot tornar a editar.
     setBonus(d.bonusPoints);
     setPenalty(d.penaltyPoints);
   }

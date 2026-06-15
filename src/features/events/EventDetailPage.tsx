@@ -7,6 +7,7 @@ import {
   eventsRepo,
   matchesRepo,
   participantsRepo,
+  pointsRoundsRepo,
   teamsRepo,
 } from "@/data";
 import type {
@@ -14,6 +15,7 @@ import type {
   Match,
   OlimpiadaEvent,
   Participant,
+  PointsRound,
   Team,
 } from "@/domain/types";
 import { getEventFormatLabel } from "@/domain/formatLabels";
@@ -31,6 +33,8 @@ export interface EventData {
   participants: Participant[];
   matches: Match[];
   attendance: AttendanceRecord[];
+  /** Rondes de puntuació (només per format `points_league_bracket`). */
+  pointsRounds: PointsRound[];
 }
 
 export function EventDetailPage() {
@@ -58,19 +62,28 @@ export function EventDetailPage() {
     });
     setError(null);
     try {
-      const [event, teams, participants, matches, attendance] = await Promise.all([
-        eventsRepo.get(seasonId, eventId),
-        teamsRepo.list(seasonId, eventId),
-        participantsRepo.list(seasonId),
-        matchesRepo.list(seasonId, eventId),
-        attendanceRepo.listForEvent(seasonId, eventId),
-      ]);
+      const [event, teams, participants, matches, attendance, pointsRounds] =
+        await Promise.all([
+          eventsRepo.get(seasonId, eventId),
+          teamsRepo.list(seasonId, eventId),
+          participantsRepo.list(seasonId),
+          matchesRepo.list(seasonId, eventId),
+          attendanceRepo.listForEvent(seasonId, eventId),
+          pointsRoundsRepo.list(seasonId, eventId),
+        ]);
       if (!event) {
         setError("Aquest esdeveniment no existeix.");
         setData(null);
         return;
       }
-      setData({ event, teams, participants, matches, attendance });
+      setData({
+        event,
+        teams,
+        participants,
+        matches,
+        attendance,
+        pointsRounds,
+      });
     } catch (e) {
       console.error(e);
       setError("No s'han pogut carregar les dades de l'esdeveniment.");

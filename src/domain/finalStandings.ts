@@ -1,15 +1,6 @@
 /**
  * Càlcul de posicions finals d'un esdeveniment a partir dels matches.
  *
- * El model fa servir un tipus explícit `BracketTier` per classificar a quin
- * "nivell" ha arribat cada equip (campió, subcampió, 3r, 4t, o simplement
- * "ha arribat fins a la ronda N"). Això manté la lògica del càlcul
- * autodescriptiva i permet afegir nous tiers (p. ex. partit de 5è/6è)
- * sense haver de fer mans i mànigues amb constants numèriques màgiques.
- *
- * Per a l'assignació de posicions fem servir un score numèric intern
- * (`tierScore`) que només serveix per ordenar tiers; la lògica de negoci
- * treballa sempre amb tiers.
  */
 
 import type { FinalStanding, Match } from "./types";
@@ -18,9 +9,6 @@ import { assignDensePositions } from "./positions";
 /**
  * Nivell assolit per un equip a la fase eliminatòria.
  *
- * Ordre (millor -> pitjor):
- *   final_winner > final_loser > third_place_winner > third_place_loser >
- *   reached_round(r) (r més gran = millor) > none
  */
 export type BracketTier =
   | { kind: "none" }
@@ -64,11 +52,6 @@ function tierScore(tier: BracketTier): number {
 
 /**
  * Determina el millor tier assolit per un equip donat l'historial de matches.
- *
- * - Final (o partit únic): guanyador -> final_winner; perdedor -> final_loser.
- * - Partit de 3r: guanyador -> third_place_winner; perdedor -> third_place_loser.
- * - Altres rondes eliminatòries: si guanya, reached_round(round).
- * - Fase de grups: no compta (no afecta el tier).
  */
 export function computeBracketTier(teamId: string, matches: Match[]): BracketTier {
   let best: BracketTier = { kind: "none" };
@@ -97,7 +80,6 @@ export function computeBracketTier(teamId: string, matches: Match[]): BracketTie
       continue;
     }
 
-    // Rondes eliminatòries anteriors (quarts, vuitens, etc.).
     if (won) consider({ kind: "reached_round", round: m.round ?? 0 });
   }
 
@@ -143,11 +125,6 @@ export function areAllMatchesDecided(matches: Match[]): boolean {
 /**
  * Posicions finals per al format "Només lligueta".
  *
- * Suma els punts de tots els matches de fase de grup (3 per victòria,
- * 1 per empat) i resol empats amb posicions denses (1, 1, 2, 3...).
- *
- * Els equips que no apareixen a cap match queden amb 0 punts (a l'última
- * posició empatats amb la resta sense punts).
  */
 export function computeLeagueFinalStandings(
   teamIds: string[],

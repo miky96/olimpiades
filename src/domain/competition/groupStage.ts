@@ -34,12 +34,6 @@ const defaultMakeId = () => `match_${Date.now().toString(36)}_${(counter++).toSt
 
 export const MIN_TEAMS_FOR_GROUP_STAGE = 4;
 
-/**
- * Reparteix equips en grups de mida `groupSize`.
- *
- * Per defecte manté l'ordre d'entrada dels equips (els N primers al grup A,
- * els següents al grup B, etc.). Si es passa `rng`, es barreja abans.
- */
 export function buildGroups(
   teamIds: string[],
   groupSize: 3 | 4,
@@ -55,8 +49,6 @@ export function buildGroups(
   let groupIndex = 0;
   for (let i = 0; i < shuffled.length; i += groupSize) {
     const members = shuffled.slice(i, i + groupSize);
-    // Si l'últim grup queda amb 1 sol equip, l'afegim al grup anterior
-    // per evitar grups unipersonals (cas edge amb groupSize=4 i N%4 === 1).
     if (members.length === 1 && groups.length > 0) {
       groups[groups.length - 1].teamIds.push(members[0]);
       continue;
@@ -67,7 +59,6 @@ export function buildGroups(
   return groups;
 }
 
-/** Genera tots els enfrontaments round-robin per a un grup donat. */
 export function generateRoundRobinMatches(
   group: Group,
   eventId: string,
@@ -91,9 +82,6 @@ export function generateRoundRobinMatches(
   return matches;
 }
 
-/**
- * Genera la fase de grups completa: crea els grups + els matches round-robin.
- */
 export function generateGroupStage(
   teamIds: string[],
   opts: GenerateGroupStageOptions
@@ -105,9 +93,6 @@ export function generateGroupStage(
 }
 
 /**
- * Calcula la classificació dins d'un grup segons els matches jugats.
- * Comptabilitza victòries (3 punts) i empats (1 punt), estil futbol.
- * Retorna equips ordenats descendentment per punts de grup.
  *
  * Els empats de punts de grup es deixen indicats — l'admin haurà de desempatar
  * manualment (p. ex. amb un botó a la UI) per decidir qui passa a eliminatòries.
@@ -158,7 +143,6 @@ export function groupStandings(
       a.losses += 1;
       b.points += 3;
     } else if (m.winnerTeamId === null && m.scoreA != null && m.scoreB != null && m.scoreA === m.scoreB) {
-      // Empat explícit
       a.played += 1;
       b.played += 1;
       a.draws += 1;

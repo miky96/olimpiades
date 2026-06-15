@@ -35,7 +35,8 @@ export type EventFormat =
   | "bracket"
   | "group_stage_bracket"
   | "league_only"
-  | "rotating_singles";
+  | "rotating_singles"
+  | "points_league_bracket";
 
 export type EventStatus = "draft" | "in_progress" | "finished";
 
@@ -51,6 +52,12 @@ export interface EventFormatConfig {
    * la UI ho renderitza com a participants individuals.
    */
   individualMode?: boolean;
+  /**
+   * Nombre de classificats al bracket per al format `points_league_bracket`.
+   * L'admin l'escull just abans de generar l'eliminatòria. 0 (o omès) =
+   * encara no s'ha generat o no hi haurà bracket (només lligueta de punts).
+   */
+  bracketQualifiers?: number;
 }
 
 export interface OlimpiadaEvent {
@@ -172,4 +179,28 @@ export interface IndividualFinalStanding {
   position: number;
   /** Participants que comparteixen aquesta posició. */
   participantIds: string[];
+}
+
+/**
+ * Ronda de puntuació individual del format `points_league_bracket`.
+ *
+ * Cada ronda emmagatzema un mapa `teamId -> punts` (recordem que en mode
+ * individual cada participant és un team d'1 membre, així reaprofitem
+ * l'estructura existent). Les puntuacions són enters o decimals positius o
+ * negatius (decideix l'admin segons l'esport).
+ *
+ * Decisió: una sola fila per ronda amb tots els scores agrupats simplifica
+ * la càrrega i l'edició (no cal coordinar N matches per ronda).
+ */
+export interface PointsRound {
+  id: string;
+  eventId: string;
+  /** Número incremental (1, 2, 3, …). Únic per esdeveniment. */
+  roundNumber: number;
+  /**
+   * Puntuació per participant. Les claus són teamIds (que en mode individual
+   * coincideixen 1-a-1 amb participants). Si un participant no apareix, té
+   * 0 punts a aquesta ronda.
+   */
+  scores: Record<string, number>;
 }

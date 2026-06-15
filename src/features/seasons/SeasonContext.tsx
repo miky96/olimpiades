@@ -22,7 +22,6 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
       const list = await seasonsRepo.list();
       list.sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? ""));
       setSeasons(list);
-      // Si encara no hi ha cap temporada seleccionada, agafem l'activa.
       const active = list.find((s) => s.status === "active");
       setCurrentId((prev) => prev ?? active?.id ?? list[0]?.id ?? null);
     } catch (e) {

@@ -1,7 +1,13 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Badge, Button, ErrorMessage, Field, Input, Select } from "@/ui/forms";
 import { useDialog } from "@/ui/dialog/useDialog";
-import { competitionRepo, matchesRepo, teamsRepo, eventsRepo } from "@/data";
+import {
+  competitionRepo,
+  matchesRepo,
+  pointsRoundsRepo,
+  teamsRepo,
+  eventsRepo,
+} from "@/data";
 import type { Participant, Team } from "@/domain/types";
 import { competition } from "@/domain";
 import { isIndividualMode } from "@/domain/formatLabels";
@@ -185,6 +191,12 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
       );
       return;
     }
+    if (event.format === "points_league_bracket" && eligibleTeams.length < 2) {
+      setInitError(
+        'El format "Lligueta de punts" necessita almenys 2 participants.'
+      );
+      return;
+    }
     const ok = await dialog.confirm({
       title: "Iniciar competició",
       message: individual
@@ -243,6 +255,13 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
     if (!ok) return;
     try {
       await matchesRepo.clearAll(seasonId, event.id);
+      // Per `points_league_bracket` també esborrem les rondes de puntuació
+      // per deixar l'esdeveniment realment com a "draft" net. Si es vol
+      // conservar les rondes i només refer el bracket, l'admin pot
+      // fer-ho des de la vista de resultats (acció més fina).
+      if (event.format === "points_league_bracket") {
+        await pointsRoundsRepo.clearAll(seasonId, event.id);
+      }
       await eventsRepo.update(seasonId, event.id, { status: "draft" });
       await onChanged();
     } catch (err) {

@@ -2,17 +2,6 @@
  * Format "partits rotatius" (individual): 2 equips juguen un partit. Després
  * pots afegir-ne un altre, opcionalment regenerant els equips entre rondes.
  *
- * - Sempre 2 equips (mai més). El nombre de participants per equip pot
- *   variar entre rondes si l'admin canvia la composició dels equips.
- * - Cada partit es guarda amb `phase: "rotating"` i un `round` 1, 2, 3...
- * - El sistema d'empats està DESACTIVAT en aquest format (sempre cal triar
- *   guanyador), per simplicitat de UX i per coherència amb la decisió de
- *   producte.
- * - Puntuació individual per partit: 3 si guanyes, 0 si perds.
- * - La classificació final ordena participants per punts de partit
- *   descendents (empats densos: 1, 1, 2, ...).
- *
- * Mòdul **pur**: sense dependències a Firebase ni a cap adaptador.
  */
 
 import type {
@@ -142,7 +131,7 @@ export function computeRotatingStats(
   for (const m of matches) {
     if (m.phase !== "rotating") continue;
     if (!m.teamAId || !m.teamBId) continue;
-    if (!m.winnerTeamId) continue; // partit no resolt encara
+    if (!m.winnerTeamId) continue;
 
     const teamA = teamById.get(m.teamAId);
     const teamB = teamById.get(m.teamBId);
@@ -197,9 +186,7 @@ export function computeRotatingIndividualStandings(
     (s) => s.played > 0
   );
   if (stats.length === 0) return [];
-  // Reaprofitem `assignDensePositions` (basat en teamId) tractant l'id de
-  // participant com si fos un teamId. La conversió a IndividualFinalStanding
-  // és immediata.
+
   const dense = assignDensePositions(
     stats.map((s) => ({ teamId: s.participantId, score: s.matchPoints }))
   );

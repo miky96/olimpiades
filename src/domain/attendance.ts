@@ -11,18 +11,6 @@ import type { AttendanceRecord, Participant } from "./types";
  * retorna els registres que caldria crear amb valors per defecte
  * (status "present", bonus +5, penalització 0).
  *
- * Regla d'elegibilitat (la mateixa que la UI d'assistència):
- *  - Participants actius a la temporada.
- *  - Més els que ja tenen un registre previ, encara que siguin inactius
- *    (per contemplar el cas "un inactiu va venir puntualment").
- *
- * No fa cap escriptura ni càlcul agregat: només retorna els registres que
- * falten. Els consumidors (p. ex. `attendanceRepo.ensureDefaults`) poden
- * persistir-los.
- *
- * Nota sobre `id`: el repositori de Firestore usa el `participantId` com a
- * identificador del document, així que podem avançar aquest valor sense
- * haver de consultar Firestore.
  */
 export function computeMissingAttendanceDefaults(args: {
   eventId: string;
@@ -51,11 +39,6 @@ export function computeMissingAttendanceDefaults(args: {
 /**
  * Retorna els participants que compten com a "presents" a l'esdeveniment.
  *
- * Regla:
- *  - Si tenen un registre d'assistència: només compten si status === "present".
- *  - Si NO tenen registre i són actius: compten com a present (mateix default
- *    que aplica AttendanceTab abans de desar res).
- *  - Inactius sense registre: queden fora.
  */
 export function selectPresentParticipants(
   participants: Participant[],
