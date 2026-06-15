@@ -104,8 +104,6 @@ export function calculateEventPoints(
     }
   }
 
-  // Participants apuntats però sense equip (p. ex. assistents a un event individual
-  // que no apareixen a cap team) reben només bonus/penalització.
   const participantsWithTeam = new Set(result.map((r) => r.participantId));
   for (const [participantId, record] of Object.entries(attendance)) {
     if (participantsWithTeam.has(participantId)) continue;
@@ -132,15 +130,6 @@ export function sumPointsByParticipant(
 /**
  * Calcula els punts per participant per al format `rotating_singles`.
  *
- * Diferències respecte a `calculateEventPoints`:
- *  - La classificació és INDIVIDUAL (per participant), no per equip.
- *  - Els participants jugadors reben `pointsForPosition(rang individual)`,
- *    aplicant la regla 5/3/1 com a la resta de formats.
- *  - A més, es desa el detall de partits jugats/guanyats i els punts de
- *    partit (3/0) per a transparència, però aquests NO compten al total.
- *  - Bonus i penalitzacions d'assistència es mantenen igual.
- *  - Els participants apuntats que no han jugat cap partit reben només els
- *    seus bonus/penalitzacions (sense punts de posició).
  */
 export function calculateRotatingEventPoints(args: {
   matches: Match[];
@@ -152,7 +141,6 @@ export function calculateRotatingEventPoints(args: {
 
   const stats = computeRotatingStats(matches, teams);
 
-  // Mapa participantId → posició (per aplicar 5/3/1).
   const positionByParticipant = new Map<string, number>();
   for (const s of individualStandings) {
     for (const pid of s.participantIds) {
@@ -183,7 +171,6 @@ export function calculateRotatingEventPoints(args: {
     });
   }
 
-  // Participants apuntats que no han jugat cap partit: només bonus/penalització.
   for (const [participantId, record] of Object.entries(attendance)) {
     if (seen.has(participantId)) continue;
     if (!record) continue;

@@ -19,6 +19,7 @@ const FORMATS: EventFormat[] = [
   "bracket",
   "group_stage_bracket",
   "league_only",
+  "points_league_bracket",
 ];
 
 export function EventsPage() {

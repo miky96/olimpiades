@@ -7,7 +7,10 @@ import {
   planTeamSizes,
 } from "@/domain/competition/randomTeams";
 import { selectPresentParticipants } from "@/domain/attendance";
-import { supportsIndividualMode } from "@/domain/formatLabels";
+import {
+  isAlwaysIndividual,
+  supportsIndividualMode,
+} from "@/domain/formatLabels";
 import type {
   AttendanceRecord,
   EventFormat,
@@ -62,9 +65,13 @@ export function RandomTeamsGenerator({
   const total = present.length;
 
   const canBeIndividual = supportsIndividualMode(format);
+  const forcedIndividual = isAlwaysIndividual(format);
   const [individualMode, setIndividualMode] = useState<boolean>(
-    Boolean(config?.individualMode) && canBeIndividual
+    forcedIndividual || (Boolean(config?.individualMode) && canBeIndividual)
   );
+  // Per als formats sempre-individuals, ocultem el toggle: l'opció no té
+  // sentit a la UI perquè el format no permet mode equips.
+  const showModeToggle = canBeIndividual && !forcedIndividual;
 
   const lockToTwoTeams = TWO_TEAM_FORMATS.includes(format);
 
@@ -251,7 +258,7 @@ export function RandomTeamsGenerator({
         ) : null}
       </p>
 
-      {canBeIndividual ? (
+      {showModeToggle ? (
         <fieldset className="mb-4">
           <legend className="mb-2 text-xs font-medium uppercase tracking-wide muted">
             Tipus de competidor

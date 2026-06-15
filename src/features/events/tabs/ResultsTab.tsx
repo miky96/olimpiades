@@ -18,6 +18,7 @@ import { isIndividualMode } from "@/domain/formatLabels";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
 import { RotatingSinglesView } from "./rotating/RotatingSinglesView";
+import { PointsLeagueView } from "./pointsLeague/PointsLeagueView";
 
 interface Props {
   data: EventData;
@@ -56,6 +57,9 @@ const PHASE_LABELS: Record<MatchPhase, string> = {
 export function ResultsTab(props: Props) {
   if (props.data.event.format === "rotating_singles") {
     return <RotatingSinglesView {...props} />;
+  }
+  if (props.data.event.format === "points_league_bracket") {
+    return <PointsLeagueView {...props} />;
   }
   return <TeamFormatsResultsTab {...props} />;
 }

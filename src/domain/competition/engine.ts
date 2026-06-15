@@ -1,8 +1,3 @@
-/**
- * Entry point del motor de competició.
- * Exposa funcions pures per generar el "kick-off" de cada format.
- */
-
 import type { EventFormat, EventFormatConfig, Match } from "../types";
 import { generateFirstRoundBracket } from "./bracket";
 import { generateGroupStage, type Group } from "./groupStage";
@@ -25,13 +20,16 @@ export interface InitCompetitionOptions {
 
 /**
  * Inicialitza la competició segons el format escollit.
- * - single_match        → 1 partit únic.
- * - bracket             → primera ronda de l'eliminatòria.
- * - group_stage_bracket → tots els matches round-robin de la fase de grups.
- * - league_only         → un sol grup amb tots els equips, round-robin sencer
- *                         (no hi ha eliminatòria posterior).
- * - rotating_singles    → primer partit (round 1) entre 2 equips. Les rondes
- *                         següents es creen per acció de l'admin via UI.
+ * - single_match           → 1 partit únic.
+ * - bracket                → primera ronda de l'eliminatòria.
+ * - group_stage_bracket    → tots els matches round-robin de la fase de grups.
+ * - league_only            → un sol grup amb tots els equips, round-robin sencer
+ *                            (no hi ha eliminatòria posterior).
+ * - rotating_singles       → primer partit (round 1) entre 2 equips. Les rondes
+ *                            següents es creen per acció de l'admin via UI.
+ * - points_league_bracket  → no genera cap match d'inici. La puntuació es duu
+ *                            a `pointsRounds` (entitat pròpia) i el bracket
+ *                            opcional es genera després via UI.
  */
 export function initCompetition(
   format: EventFormat,
@@ -78,6 +76,8 @@ export function initCompetition(
           makeId: opts.makeId,
         }),
       };
+    case "points_league_bracket":
+      return { matches: [] };
     default: {
       const _exhaustive: never = format;
       throw new Error(`Format no suportat: ${_exhaustive}`);

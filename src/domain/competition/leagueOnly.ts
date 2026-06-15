@@ -4,11 +4,6 @@
  * de "fase de grups" amb un sol grup, així podem reaprofitar
  * `groupStandings` per a la classificació i el càlcul de posicions finals.
  *
- * Decisions:
- *  - Mínim 2 equips (a diferència de "lligueta + bracket" que en demana 4).
- *  - El grup s'anomena `group_A` per consistència amb la UI existent.
- *  - Si es proporciona un `rng`, es barreja l'ordre dels equips (no canvia
- *    el resultat funcional, només l'ordre dels matches generats).
  */
 
 import type { Match } from "../types";

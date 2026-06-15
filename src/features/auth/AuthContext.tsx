@@ -21,7 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Subscripció a l'estat d'auth de Firebase.
   useEffect(() => {
     const auth = getAuthInstance();
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -31,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-      // Carreguem el perfil (rol) des de Firestore.
+
       try {
         const profile = await usersRepo.get(user.uid);
         setAppUser(profile);

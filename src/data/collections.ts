@@ -33,6 +33,15 @@ export const paths = {
   match: (seasonId: string, eventId: string, matchId: string) =>
     `seasons/${seasonId}/events/${eventId}/matches/${matchId}`,
 
+  /**
+   * Rondes de puntuació del format `points_league_bracket`. Cada document
+   * conté el roundNumber i un mapa `scores: { teamId: punts }`.
+   */
+  pointsRounds: (seasonId: string, eventId: string) =>
+    `seasons/${seasonId}/events/${eventId}/pointsRounds`,
+  pointsRound: (seasonId: string, eventId: string, roundId: string) =>
+    `seasons/${seasonId}/events/${eventId}/pointsRounds/${roundId}`,
+
   finalStandings: (seasonId: string, eventId: string) =>
     `seasons/${seasonId}/events/${eventId}/finalStandings`,
 } as const;
