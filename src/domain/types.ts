@@ -36,7 +36,8 @@ export type EventFormat =
   | "group_stage_bracket"
   | "league_only"
   | "rotating_singles"
-  | "points_league_bracket";
+  | "points_league_bracket"
+  | "score_ranking";
 
 export type EventStatus = "draft" | "in_progress" | "finished";
 
@@ -58,6 +59,11 @@ export interface EventFormatConfig {
    * encara no s'ha generat o no hi haurà bracket (només lligueta de punts).
    */
   bracketQualifiers?: number;
+  /**
+   * Només `score_ranking`: sentit de la classificació. "desc" (per defecte)
+   * = guanya qui té més punts; "asc" = guanya qui en té menys (p. ex. temps).
+   */
+  scoreOrder?: "desc" | "asc";
 }
 
 export interface OlimpiadaEvent {

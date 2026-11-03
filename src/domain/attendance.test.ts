@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   computeMissingAttendanceDefaults,
+  isMarkedAbsent,
+  selectAttendingParticipants,
   selectPresentParticipants,
 } from "./attendance";
 import type { AttendanceRecord, Participant } from "./types";
@@ -118,5 +120,37 @@ describe("selectPresentParticipants", () => {
       ]
     );
     expect(result.map((x) => x.id)).toEqual(["alice"]);
+  });
+});
+
+describe("selectAttendingParticipants / isMarkedAbsent", () => {
+  const people = [
+    { id: "pr", seasonId: "s", name: "pr", active: true },
+    { id: "lt", seasonId: "s", name: "lt", active: true },
+    { id: "ab", seasonId: "s", name: "ab", active: true },
+    { id: "nr", seasonId: "s", name: "nr", active: true },
+  ];
+  const rec = (participantId: string, status: AttendanceRecord["status"]) => ({
+    id: participantId,
+    eventId: "e",
+    participantId,
+    status,
+    bonusPoints: 0,
+    penaltyPoints: 0,
+  });
+  const att = [rec("pr", "present"), rec("lt", "late"), rec("ab", "absent_unnotified")];
+
+  it("inclou presents, arribats tard i actius sense registre", () => {
+    expect(selectAttendingParticipants(people, att).map((p) => p.id)).toEqual([
+      "pr",
+      "lt",
+      "nr",
+    ]);
+  });
+
+  it("detecta absents", () => {
+    expect(isMarkedAbsent("ab", att)).toBe(true);
+    expect(isMarkedAbsent("lt", att)).toBe(false);
+    expect(isMarkedAbsent("nr", att)).toBe(false);
   });
 });

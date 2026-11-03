@@ -5,7 +5,7 @@
 
 import type { AttendanceRecord, Match, Participant, Team } from "@/domain/types";
 import { matchesRepo, teamsRepo } from "@/data";
-import { selectPresentParticipants } from "@/domain/attendance";
+import { selectAttendingParticipants } from "@/domain/attendance";
 import {
   createRotatingMatch,
   generateRandomTeams,
@@ -19,7 +19,7 @@ export interface AddNextRoundParams {
   teams: Team[];
   participants: Participant[];
   attendance: AttendanceRecord[];
-  /** Si true, regenera 2 equips nous a partir dels participants presents. */
+  /** Si true, regenera 2 equips nous a partir dels presents i arribats tard. */
   regenerate: boolean;
 }
 
@@ -53,10 +53,11 @@ export async function addNextRotatingRound(
   let teamBId: string;
 
   if (regenerate) {
-    const present = selectPresentParticipants(participants, attendance);
+    // Incloem els que han arribat tard: a mitja competició ja hi són.
+    const present = selectAttendingParticipants(participants, attendance);
     if (present.length < 2) {
       throw new Error(
-        "Calen com a mínim 2 participants amb estat 'present' per regenerar els equips."
+        "Calen com a mínim 2 participants presents (o arribats tard) per regenerar els equips."
       );
     }
     const plans = generateRandomTeams({

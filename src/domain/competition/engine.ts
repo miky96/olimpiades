@@ -30,6 +30,8 @@ export interface InitCompetitionOptions {
  * - points_league_bracket  → no genera cap match d'inici. La puntuació es duu
  *                            a `pointsRounds` (entitat pròpia) i el bracket
  *                            opcional es genera després via UI.
+ * - score_ranking          → cap match. Una única ronda de puntuació
+ *                            (`pointsRounds`) que es crea en puntuar.
  */
 export function initCompetition(
   format: EventFormat,
@@ -77,6 +79,7 @@ export function initCompetition(
         }),
       };
     case "points_league_bracket":
+    case "score_ranking":
       return { matches: [] };
     default: {
       const _exhaustive: never = format;

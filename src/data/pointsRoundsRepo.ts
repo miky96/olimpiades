@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   orderBy,
@@ -72,6 +73,19 @@ export const pointsRoundsRepo = {
     await updateDoc(
       doc(getDb(), paths.pointsRound(seasonId, eventId, roundId)),
       { [`scores.${teamId}`]: points }
+    );
+  },
+
+  /** Esborra la puntuació d'un participant (queda "sense puntuar"). */
+  async clearScore(
+    seasonId: string,
+    eventId: string,
+    roundId: string,
+    teamId: string
+  ): Promise<void> {
+    await updateDoc(
+      doc(getDb(), paths.pointsRound(seasonId, eventId, roundId)),
+      { [`scores.${teamId}`]: deleteField() }
     );
   },
 

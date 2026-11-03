@@ -8,12 +8,20 @@ import {
   teamsRepo,
   eventsRepo,
 } from "@/data";
-import type { Participant, Team } from "@/domain/types";
-import { competition } from "@/domain";
+import type { AttendanceStatus, Participant, Team } from "@/domain/types";
+import {
+  assignedParticipantIds,
+  canAddCompetitorMidway,
+  canEditTeamMembers,
+  canRemoveCompetitorMidway,
+  competition,
+  isMarkedAbsent,
+} from "@/domain";
 import { isIndividualMode } from "@/domain/formatLabels";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../EventDetailPage";
 import { RandomTeamsGenerator } from "./RandomTeamsGenerator";
+import { changeTeamMembers, markAttendance } from "./teams/teamMembersActions";
 
 interface Props {
   data: EventData;
@@ -24,10 +32,14 @@ interface Props {
 export function TeamsTab({ data, readOnly, onChanged }: Props) {
   const dialog = useDialog();
   const { currentSeason } = useSeasons();
-  const { event, teams, participants } = data;
+  const { event, teams, participants, attendance, matches } = data;
   const seasonId = currentSeason?.id ?? "";
   const isDraft = event.status === "draft";
+  const inProgress = event.status === "in_progress";
   const canEdit = !readOnly && isDraft;
+  const canEditMembersOf = (team: Team) =>
+    !readOnly && canEditTeamMembers(event, team, matches);
+  const canAddCompetitor = !readOnly && canAddCompetitorMidway(event);
   const individual = isIndividualMode(event.format, event.config);
   // En mode individual fem servir "participants" als textos per coherència
   // amb el que veu l'usuari (cada team és en realitat 1 participant).
@@ -48,15 +60,92 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
     [participants]
   );
 
-  const assignedIds = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of teams) for (const pid of t.participantIds) set.add(pid);
-    return set;
-  }, [teams]);
-
-  const availableParticipants = participants.filter(
-    (p) => p.active && !assignedIds.has(p.id)
+  const assignedIds = useMemo(
+    () => assignedParticipantIds(event, teams, matches),
+    [event, teams, matches]
   );
+
+  // Els absents no s'ofereixen: si algú marcat absent acaba venint, cal
+  // canviar-li primer l'assistència (p. ex. a "Arriba tard").
+  const availableParticipants = participants
+    .filter(
+      (p) =>
+        p.active && !assignedIds.has(p.id) && !isMarkedAbsent(p.id, attendance)
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const attendanceOf = (participantId: string) =>
+    attendance.find((a) => a.participantId === participantId);
+
+  /**
+   * Amb la competició en curs, en afegir algú pregunta si cal marcar-lo com
+   * a "Arriba tard". Retorna false si l'usuari cancel·la.
+   */
+  async function confirmLateArrival(participantId: string): Promise<boolean> {
+    if (!inProgress) return true;
+    const rec = attendanceOf(participantId);
+    if (rec?.status === "late") return true;
+    const name = participantById.get(participantId)?.name ?? "";
+    const choice = await dialog.choose({
+      title: `Afegir ${name}`,
+      options: [
+        {
+          value: "late",
+          label: "Afegir i marcar com a 'Arriba tard'",
+          description: "S'aplica la penalització per defecte de retard.",
+          variant: "primary",
+        },
+        {
+          value: "keep",
+          label: "Afegir sense canviar l'assistència",
+        },
+      ],
+    });
+    if (!choice) return false;
+    if (choice === "late") {
+      await markAttendance({
+        seasonId,
+        eventId: event.id,
+        participantId,
+        status: "late",
+        existing: rec,
+      });
+    }
+    return true;
+  }
+
+  /**
+   * Amb la competició en curs, en treure algú pregunta si cal marcar-lo com
+   * a absent. Retorna false si l'usuari cancel·la.
+   */
+  async function confirmRemoval(participantId: string): Promise<boolean> {
+    if (!inProgress) return true;
+    if (isMarkedAbsent(participantId, attendance)) return true;
+    const name = participantById.get(participantId)?.name ?? "";
+    const choice = await dialog.choose<AttendanceStatus | "keep">({
+      title: `Treure ${name}`,
+      message: "Vols marcar-lo també com a absent?",
+      options: [
+        { value: "absent_notified", label: "Treure i marcar 'Absent (avisat)'" },
+        {
+          value: "absent_unnotified",
+          label: "Treure i marcar 'Absent (sense avisar)'",
+        },
+        { value: "keep", label: "Només treure (no tocar l'assistència)" },
+      ],
+    });
+    if (!choice) return false;
+    if (choice !== "keep") {
+      await markAttendance({
+        seasonId,
+        eventId: event.id,
+        participantId,
+        status: choice,
+        existing: attendanceOf(participantId),
+      });
+    }
+    return true;
+  }
 
   async function handleCreate(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -129,27 +218,95 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
   }
 
   async function handleAddMember(team: Team, participantId: string) {
-    if (!canEdit) return;
+    if (!canEditMembersOf(team)) return;
     if (team.participantIds.includes(participantId)) return;
     try {
-      await teamsRepo.update(seasonId, event.id, team.id, {
-        participantIds: [...team.participantIds, participantId],
+      if (!(await confirmLateArrival(participantId))) return;
+      await changeTeamMembers({
+        seasonId,
+        event,
+        team,
+        nextParticipantIds: [...team.participantIds, participantId],
+        matches,
       });
       await onChanged();
     } catch (err) {
       console.error(err);
+      await dialog.alert({
+        title: "No s'ha pogut afegir el participant",
+        tone: "danger",
+      });
     }
   }
 
   async function handleRemoveMember(team: Team, participantId: string) {
-    if (!canEdit) return;
+    if (!canEditMembersOf(team)) return;
     try {
-      await teamsRepo.update(seasonId, event.id, team.id, {
-        participantIds: team.participantIds.filter((id) => id !== participantId),
+      if (!(await confirmRemoval(participantId))) return;
+      await changeTeamMembers({
+        seasonId,
+        event,
+        team,
+        nextParticipantIds: team.participantIds.filter(
+          (id) => id !== participantId
+        ),
+        matches,
       });
       await onChanged();
     } catch (err) {
       console.error(err);
+      await dialog.alert({
+        title: "No s'ha pogut treure el participant",
+        tone: "danger",
+      });
+    }
+  }
+
+  /** Formats individuals per puntuació: afegir un competidor a mitja prova. */
+  async function handleAddCompetitor(participantId: string) {
+    if (!canAddCompetitor) return;
+    const p = participantById.get(participantId);
+    if (!p) return;
+    try {
+      if (!(await confirmLateArrival(participantId))) return;
+      await teamsRepo.create(seasonId, event.id, {
+        name: p.name,
+        participantIds: [p.id],
+      });
+      await onChanged();
+    } catch (err) {
+      console.error(err);
+      await dialog.alert({
+        title: "No s'ha pogut afegir el participant",
+        tone: "danger",
+      });
+    }
+  }
+
+  /** Formats individuals per puntuació: treure un competidor a mitja prova. */
+  async function handleRemoveCompetitor(team: Team) {
+    if (readOnly || !canRemoveCompetitorMidway(event, team, matches)) return;
+    try {
+      const pid = team.participantIds[0];
+      if (pid) {
+        if (!(await confirmRemoval(pid))) return;
+      } else {
+        const ok = await dialog.confirm({
+          title: "Treure participant",
+          message: `Treure "${team.name}" de la competició?`,
+          confirmLabel: "Treure",
+          tone: "danger",
+        });
+        if (!ok) return;
+      }
+      await teamsRepo.remove(seasonId, event.id, team.id);
+      await onChanged();
+    } catch (err) {
+      console.error(err);
+      await dialog.alert({
+        title: "No s'ha pogut treure el participant",
+        tone: "danger",
+      });
     }
   }
 
@@ -188,6 +345,14 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
         individual
           ? 'El format "Només lligueta" en mode individual necessita almenys 2 participants.'
           : 'El format "Només lligueta" necessita almenys 2 equips.'
+      );
+      return;
+    }
+    if (event.format === "score_ranking" && eligibleTeams.length < 2) {
+      setInitError(
+        individual
+          ? 'El format "Prova única per puntuació" necessita almenys 2 participants.'
+          : 'El format "Prova única per puntuació" necessita almenys 2 equips.'
       );
       return;
     }
@@ -259,7 +424,10 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
       // per deixar l'esdeveniment realment com a "draft" net. Si es vol
       // conservar les rondes i només refer el bracket, l'admin pot
       // fer-ho des de la vista de resultats (acció més fina).
-      if (event.format === "points_league_bracket") {
+      if (
+        event.format === "points_league_bracket" ||
+        event.format === "score_ranking"
+      ) {
         await pointsRoundsRepo.clearAll(seasonId, event.id);
       }
       await eventsRepo.update(seasonId, event.id, { status: "draft" });
@@ -345,12 +513,28 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
         </section>
       ) : null}
 
+      {canAddCompetitor ? (
+        <AddCompetitorCard
+          availableParticipants={availableParticipants.filter(
+            (p) => !teams.some((t) => t.participantIds.includes(p.id))
+          )}
+          onAdd={handleAddCompetitor}
+        />
+      ) : null}
+
       <section className="card">
         <div className="card-header">
           <span>
             {individual ? "Participants" : "Equips"} ({teams.length})
           </span>
         </div>
+        {inProgress && !readOnly && !individual ? (
+          <p className="border-b border-slate-200/70 px-4 py-2 text-xs muted dark:border-slate-800/70 sm:px-6">
+            {event.format === "rotating_singles"
+              ? "Pots afegir qui arriba tard o treure qui marxa dels equips del partit en curs. Els partits ja jugats no canvien."
+              : "Pots afegir qui arriba tard o treure qui falta. En finalitzar, cada membre rep els punts de la posició del seu equip."}
+          </p>
+        ) : null}
         {teams.length === 0 ? (
           <p className="p-6 text-sm muted">
             {individual
@@ -365,6 +549,17 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
                   <p className="font-semibold text-slate-900 dark:text-white">
                     {team.name}
                   </p>
+                  {!canEdit &&
+                  !readOnly &&
+                  canRemoveCompetitorMidway(event, team, matches) ? (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleRemoveCompetitor(team)}
+                    >
+                      Treure
+                    </Button>
+                  ) : null}
                   {canEdit ? (
                     <div className="flex items-center gap-2">
                       {individual ? null : (
@@ -391,7 +586,7 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
                     team={team}
                     participantById={participantById}
                     availableParticipants={availableParticipants}
-                    canEdit={canEdit}
+                    canEdit={canEditMembersOf(team)}
                     onAdd={(pid) => handleAddMember(team, pid)}
                     onRemove={(pid) => handleRemoveMember(team, pid)}
                   />
@@ -466,8 +661,9 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
                 Competició en curs
               </h2>
               <p className="mt-0.5 text-sm text-amber-800/90 dark:text-amber-100/80">
-                Si cal, pots reiniciar-la per tornar a configurar els{" "}
-                {entityLabelPlural}.
+                {individual && !canAddCompetitor
+                  ? "En aquest format no es poden afegir ni treure participants a mitja competició; si cal, reinicia-la per tornar a configurar-los."
+                  : `Si cal, pots reiniciar-la per tornar a configurar els ${entityLabelPlural}.`}
               </p>
               <div className="mt-3">
                 <Button variant="danger" size="sm" onClick={handleResetCompetition}>
@@ -479,6 +675,59 @@ export function TeamsTab({ data, readOnly, onChanged }: Props) {
         </section>
       ) : null}
     </div>
+  );
+}
+
+function AddCompetitorCard({
+  availableParticipants,
+  onAdd,
+}: {
+  availableParticipants: Participant[];
+  onAdd: (participantId: string) => void;
+}) {
+  const [value, setValue] = useState("");
+  return (
+    <section className="card card-pad">
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest muted">
+        Afegir participant
+      </h2>
+      <p className="mb-3 text-sm muted">
+        Per a qui arriba tard: s'afegeix a la classificació sense puntuació.
+      </p>
+      {availableParticipants.length === 0 ? (
+        <p className="text-xs italic subtle">
+          No hi ha cap participant disponible (els absents no surten; canvia'ls
+          l'assistència si han arribat).
+        </p>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Select
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="h-8 py-0 text-xs"
+          >
+            <option value="">Tria un participant…</option>
+            {availableParticipants.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!value}
+            onClick={() => {
+              if (!value) return;
+              onAdd(value);
+              setValue("");
+            }}
+          >
+            Afegir
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 

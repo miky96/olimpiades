@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateEventPoints,
   calculateParticipantPoints,
+  onlyKnownParticipants,
   pointsForPosition,
   sumPointsByParticipant,
 } from "./scoring";
@@ -123,5 +124,17 @@ describe("calculateEventPoints", () => {
     const totals = sumPointsByParticipant(breakdowns);
     expect(totals["p1"]).toBe(5 + 5);
     expect(totals["p3"]).toBe(5 + 5);
+  });
+});
+
+describe("onlyKnownParticipants", () => {
+  it("descarta participants eliminats de la temporada", () => {
+    const rows = [
+      { participantId: "a", total: 1 },
+      { participantId: "deleted", total: 5 },
+    ];
+    expect(onlyKnownParticipants(rows, [{ id: "a" }])).toEqual([
+      { participantId: "a", total: 1 },
+    ]);
   });
 });

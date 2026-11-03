@@ -116,6 +116,19 @@ export function calculateEventPoints(
   return result;
 }
 
+/**
+ * Descarta files de participants que ja no existeixen a la temporada
+ * (p. ex. eliminats després de tenir assistència o d'estar en un equip).
+ * Sense això, al resum de l'esdeveniment apareixia l'ID en lloc del nom.
+ */
+export function onlyKnownParticipants<T extends { participantId: string }>(
+  rows: T[],
+  participants: ReadonlyArray<{ id: string }>
+): T[] {
+  const known = new Set(participants.map((p) => p.id));
+  return rows.filter((r) => known.has(r.participantId));
+}
+
 /** Utilitat: agrega punts per participant (suma de múltiples esdeveniments). */
 export function sumPointsByParticipant(
   breakdowns: ParticipantPointsBreakdown[]

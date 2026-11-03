@@ -34,8 +34,29 @@ export interface PromptOptions {
   required?: boolean;
 }
 
+/** Una opció d'un diàleg de tria (`choose`). */
+export interface ChooseOption<T extends string = string> {
+  value: T;
+  label: string;
+  description?: string;
+  /** "primary" per destacar l'opció recomanada; per defecte "secondary". */
+  variant?: "primary" | "secondary" | "danger";
+}
+
+export interface ChooseOptions<T extends string = string> {
+  title: string;
+  message?: string;
+  options: ChooseOption<T>[];
+  cancelLabel?: string;
+}
+
 export interface DialogApi {
   confirm: (opts: ConfirmOptions) => Promise<boolean>;
+  /**
+   * Diàleg amb N opcions. Resol amb el `value` de l'opció triada o `null`
+   * si l'usuari cancel·la (botó, Esc o clic fora).
+   */
+  choose: <T extends string>(opts: ChooseOptions<T>) => Promise<T | null>;
   alert: (opts: AlertOptions) => Promise<void>;
   prompt: (opts: PromptOptions) => Promise<string | null>;
 }
