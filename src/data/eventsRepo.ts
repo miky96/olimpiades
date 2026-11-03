@@ -24,6 +24,8 @@ function fromDoc(id: string, data: Record<string, unknown>): OlimpiadaEvent {
     config: (data.config as OlimpiadaEvent["config"]) ?? {},
     name: data.name as string | undefined,
     finalStandings: data.finalStandings as OlimpiadaEvent["finalStandings"],
+    individualFinalStandings:
+      data.individualFinalStandings as OlimpiadaEvent["individualFinalStandings"],
     pointsBreakdown: data.pointsBreakdown as OlimpiadaEvent["pointsBreakdown"],
   };
 }

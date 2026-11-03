@@ -15,6 +15,7 @@ import {
   computePointsLeagueFinalStandings,
   computePointsLeagueStandings,
   nextPowerOfTwo,
+  onlyKnownParticipants,
   phaseForRoundsToFinal,
 } from "@/domain";
 import { useSeasons } from "@/features/seasons/useSeasons";
@@ -280,10 +281,9 @@ export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
       const attendanceByParticipant = Object.fromEntries(
         fullAttendance.map((a) => [a.participantId, a])
       );
-      const breakdown = calculateEventPoints(
-        finalStandings,
-        teams,
-        attendanceByParticipant
+      const breakdown = onlyKnownParticipants(
+        calculateEventPoints(finalStandings, teams, attendanceByParticipant),
+        participants
       );
       await eventsRepo.update(seasonId, event.id, {
         status: "finished",
@@ -717,7 +717,7 @@ function PointsLeagueFinalSummary({
               </thead>
               <tbody className="divide-y divide-emerald-200/50 dark:divide-emerald-500/20">
                 {event.pointsBreakdown
-                  .slice()
+                  .filter((b) => participantById.has(b.participantId))
                   .sort((a, b) => b.total - a.total)
                   .map((b) => (
                     <tr

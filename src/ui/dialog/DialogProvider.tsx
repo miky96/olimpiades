@@ -11,6 +11,8 @@ import { Button, Field, Input } from "@/ui/forms";
 import {
   DialogContext,
   type AlertOptions,
+  type ChooseOption,
+  type ChooseOptions,
   type ConfirmOptions,
   type DialogApi,
   type DialogTone,
@@ -23,7 +25,7 @@ import {
  * (cua FIFO si arriben crides simultànies) i resol amb el resultat de l'usuari.
  */
 
-type DialogKind = "alert" | "confirm" | "prompt";
+type DialogKind = "alert" | "confirm" | "prompt" | "choose";
 
 interface BaseDialogState {
   id: number;
@@ -54,10 +56,17 @@ interface PromptDialogState extends BaseDialogState {
   resolve: (value: string | null) => void;
 }
 
+interface ChooseDialogState extends BaseDialogState {
+  kind: "choose";
+  options: ChooseOption[];
+  resolve: (value: string | null) => void;
+}
+
 type DialogState =
   | ConfirmDialogState
   | AlertDialogState
-  | PromptDialogState;
+  | PromptDialogState
+  | ChooseDialogState;
 
 let dialogIdCounter = 0;
 
@@ -119,7 +128,22 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         });
       });
 
-    return { confirm, alert, prompt };
+    const choose = <T extends string>(opts: ChooseOptions<T>) =>
+      new Promise<T | null>((resolve) => {
+        enqueue({
+          id: ++dialogIdCounter,
+          kind: "choose",
+          title: opts.title,
+          message: opts.message,
+          options: opts.options,
+          confirmLabel: "",
+          cancelLabel: opts.cancelLabel ?? "Cancel·lar",
+          tone: "default",
+          resolve: (value) => resolve(value as T | null),
+        });
+      });
+
+    return { confirm, alert, prompt, choose };
   }, [enqueue]);
 
   return (
@@ -167,6 +191,8 @@ function DialogModal({
     if (dialog.kind === "prompt") {
       inputRef.current?.focus();
       inputRef.current?.select();
+    } else if (dialog.kind === "choose") {
+      // Sense focus automàtic: evitem que un Enter accidental triï una opció.
     } else {
       confirmButtonRef.current?.focus();
     }
@@ -183,11 +209,19 @@ function DialogModal({
     onClose();
   }
 
+  function handleChoose(value: string) {
+    if (dialog.kind !== "choose") return;
+    dialog.resolve(value);
+    onClose();
+  }
+
   function handleConfirm() {
     if (dialog.kind === "alert") {
       dialog.resolve();
     } else if (dialog.kind === "confirm") {
       dialog.resolve(true);
+    } else if (dialog.kind === "choose") {
+      return;
     } else {
       const trimmed = value;
       if (dialog.required && trimmed.trim().length === 0) {
@@ -238,7 +272,22 @@ function DialogModal({
           </p>
         ) : null}
 
-        {dialog.kind === "prompt" ? (
+        {dialog.kind === "choose" ? (
+          <div className="mt-5 space-y-2">
+            {dialog.options.map((opt) => (
+              <ChooseOptionButton
+                key={opt.value}
+                option={opt}
+                onClick={() => handleChoose(opt.value)}
+              />
+            ))}
+            <div className="flex justify-end pt-1">
+              <Button variant="ghost" size="md" onClick={handleCancel}>
+                {dialog.cancelLabel ?? "Cancel·lar"}
+              </Button>
+            </div>
+          </div>
+        ) : dialog.kind === "prompt" ? (
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <Field label={dialog.label ?? "Valor"}>
               <Input
@@ -277,6 +326,37 @@ function DialogModal({
         )}
       </div>
     </div>
+  );
+}
+
+function ChooseOptionButton({
+  option,
+  onClick,
+}: {
+  option: ChooseOption;
+  onClick: () => void;
+}) {
+  const tone =
+    option.variant === "primary"
+      ? "border-brand-500 bg-brand-50/70 hover:bg-brand-100/70 dark:border-brand-500/60 dark:bg-brand-500/10 dark:hover:bg-brand-500/20"
+      : option.variant === "danger"
+      ? "border-rose-300 hover:bg-rose-50 dark:border-rose-500/40 dark:hover:bg-rose-500/10"
+      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/60";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`block w-full rounded-xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${tone}`}
+    >
+      <span className="block text-sm font-semibold text-slate-900 dark:text-white">
+        {option.label}
+      </span>
+      {option.description ? (
+        <span className="mt-0.5 block text-xs text-slate-600 dark:text-slate-400">
+          {option.description}
+        </span>
+      ) : null}
+    </button>
   );
 }
 

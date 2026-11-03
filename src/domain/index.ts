@@ -14,3 +14,5 @@ export * from "./competition/rotatingSingles";
 export * from "./competition/shuffle";
 export * from "./competition/randomTeams";
 export * from "./competition/pointsLeague";
+export * from "./competition/scoreRanking";
+export * from "./competition/midCompetitionEdits";

@@ -7,6 +7,7 @@ export const formatLabels: Record<EventFormat, string> = {
   league_only: "Només lligueta",
   rotating_singles: "Partits rotatius (individual)",
   points_league_bracket: "Lligueta de punts (individual)",
+  score_ranking: "Prova única per puntuació",
 };
 
 export const formatDescriptions: Record<EventFormat, string> = {
@@ -20,6 +21,8 @@ export const formatDescriptions: Record<EventFormat, string> = {
     "2 equips, partits encadenats. Després de cada partit pots regenerar els equips. La classificació final és individual: cada participant suma 3 punts per partit guanyat (0 per perdut).",
   points_league_bracket:
     "Lligueta individual per puntuació en múltiples rondes (p. ex. tir amb arc). Al final pots generar opcionalment una eliminatòria amb els X primers classificats.",
+  score_ranking:
+    "Una sola prova (p. ex. cursa d'orientació) on cada participant o equip obté una puntuació o temps. La classificació d'aquesta prova és la de l'esdeveniment.",
 };
 
 /**
@@ -33,6 +36,7 @@ export const INDIVIDUAL_MODE_FORMATS: ReadonlyArray<EventFormat> = [
   "league_only",
   "group_stage_bracket",
   "points_league_bracket",
+  "score_ranking",
 ];
 
 /**

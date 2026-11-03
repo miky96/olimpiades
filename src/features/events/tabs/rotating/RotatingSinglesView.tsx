@@ -8,6 +8,7 @@ import {
   calculateRotatingEventPoints,
   computeRotatingIndividualStandings,
   lastRotatingRound,
+  onlyKnownParticipants,
 } from "@/domain";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../../EventDetailPage";
@@ -60,19 +61,27 @@ export function RotatingSinglesView({ data, readOnly, onChanged }: Props) {
   async function handleAddNext() {
     if (!canAddNext) return;
     setError(null);
-    const continueIt = await dialog.confirm({
-      title: "Nou partit?",
+    const choice = await dialog.choose({
+      title: "Nou partit",
       message:
-        "Vols afegir un altre partit a la sèrie? Si no, podràs finalitzar la competició.",
-      confirmLabel: "Sí, nou partit",
+        "Afegeix un altre partit a la sèrie. Si no vols més partits, cancel·la i finalitza la competició.",
+      options: [
+        {
+          value: "regenerate",
+          label: "Nou partit amb equips nous",
+          description:
+            "Es barregen els participants presents (inclosos els que han arribat tard) en 2 equips nous.",
+          variant: "primary",
+        },
+        {
+          value: "same",
+          label: "Nou partit amb els mateixos equips",
+          description: "Es manté la composició del darrer partit.",
+        },
+      ],
     });
-    if (!continueIt) return;
-    const regenerate = await dialog.confirm({
-      title: "Regenerar equips?",
-      message:
-        "Vols barrejar els participants i crear 2 equips nous? Si dius que no, es manté la mateixa composició.",
-      confirmLabel: "Sí, regenerar",
-    });
+    if (!choice) return;
+    const regenerate = choice === "regenerate";
     setBusy(true);
     try {
       await addNextRotatingRound({
@@ -119,12 +128,15 @@ export function RotatingSinglesView({ data, readOnly, onChanged }: Props) {
         matches,
         teams
       );
-      const breakdown = calculateRotatingEventPoints({
-        matches,
-        teams,
-        individualStandings,
-        attendance: attendanceByParticipant,
-      });
+      const breakdown = onlyKnownParticipants(
+        calculateRotatingEventPoints({
+          matches,
+          teams,
+          individualStandings,
+          attendance: attendanceByParticipant,
+        }),
+        participants
+      );
       await eventsRepo.update(seasonId, event.id, {
         status: "finished",
         finalStandings: [],
@@ -285,7 +297,8 @@ function RotatingFinalSummary({
                   </Badge>
                   <span className="text-slate-800 dark:text-slate-200">
                     {s.participantIds
-                      .map((pid) => participantById.get(pid)?.name ?? pid)
+                      .filter((pid) => participantById.has(pid))
+                      .map((pid) => participantById.get(pid)?.name)
                       .join(", ")}
                   </span>
                 </li>
@@ -314,7 +327,7 @@ function RotatingFinalSummary({
               </thead>
               <tbody className="divide-y divide-emerald-200/50 dark:divide-emerald-500/20">
                 {event.pointsBreakdown
-                  .slice()
+                  .filter((b) => participantById.has(b.participantId))
                   .sort((a, b) => b.total - a.total)
                   .map((b) => (
                     <tr

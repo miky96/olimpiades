@@ -10,6 +10,7 @@ import {
   formatLabels,
   getEventFormatLabel,
 } from "@/domain/formatLabels";
+import { scoreOrderLabels } from "@/domain/competition/scoreRanking";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import { useAuth, hasRole } from "@/features/auth/useAuth";
 
@@ -20,6 +21,7 @@ const FORMATS: EventFormat[] = [
   "group_stage_bracket",
   "league_only",
   "points_league_bracket",
+  "score_ranking",
 ];
 
 export function EventsPage() {
@@ -38,6 +40,7 @@ export function EventsPage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [format, setFormat] = useState<EventFormat>("bracket");
   const [groupSize, setGroupSize] = useState<3 | 4>(4);
+  const [scoreOrder, setScoreOrder] = useState<"desc" | "asc">("desc");
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -90,6 +93,8 @@ export function EventsPage() {
         config:
           format === "group_stage_bracket"
             ? { groupSize, qualifiersPerGroup: 2 }
+            : format === "score_ranking"
+            ? { scoreOrder }
             : {},
       };
       const trimmedName = name.trim();
@@ -203,6 +208,19 @@ export function EventsPage() {
                 >
                   <option value={3}>3 equips per grup</option>
                   <option value={4}>4 equips per grup</option>
+                </Select>
+              </Field>
+            ) : null}
+            {format === "score_ranking" ? (
+              <Field label="Classificació">
+                <Select
+                  value={scoreOrder}
+                  onChange={(e) =>
+                    setScoreOrder(e.target.value as "desc" | "asc")
+                  }
+                >
+                  <option value="desc">{scoreOrderLabels.desc}</option>
+                  <option value="asc">{scoreOrderLabels.asc}</option>
                 </Select>
               </Field>
             ) : null}
