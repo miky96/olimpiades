@@ -85,7 +85,11 @@ export function planBracketGeneration(opts: {
     rng,
     makeId,
   } = opts;
-  const standings = computePointsLeagueStandings(teams, rounds);
+  const standings = computePointsLeagueStandings(
+    teams,
+    rounds,
+    config.pointsLeagueMode
+  );
   const qualifiers = selectTopQualifiers(standings, qualifierCount);
   if (qualifiers.length < 2) {
     throw new Error(

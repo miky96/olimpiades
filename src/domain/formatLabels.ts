@@ -20,7 +20,7 @@ export const formatDescriptions: Record<EventFormat, string> = {
   rotating_singles:
     "2 equips, partits encadenats. Després de cada partit pots regenerar els equips. La classificació final és individual: cada participant suma 3 punts per partit guanyat (0 per perdut).",
   points_league_bracket:
-    "Lligueta individual per puntuació en múltiples rondes (p. ex. tir amb arc). Al final pots generar opcionalment una eliminatòria amb els X primers classificats.",
+    "Lligueta individual en múltiples rondes. Cada ronda es puntua per punts (p. ex. tir amb arc) o per posicions (p. ex. jocs eliminatoris: guanya qui queda 1r més cops, desempat per 2ns, 3rs…). Al final pots generar opcionalment una eliminatòria amb els X primers classificats.",
   score_ranking:
     "Una sola prova (p. ex. cursa d'orientació) on cada participant o equip obté una puntuació o temps. La classificació d'aquesta prova és la de l'esdeveniment.",
 };

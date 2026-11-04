@@ -60,6 +60,13 @@ export interface EventFormatConfig {
    */
   bracketQualifiers?: number;
   /**
+   * Només `points_league_bracket`: com es puntua cada ronda.
+   * "points" (per defecte) = suma de punts; "placement" = cada ronda guarda
+   * la posició (1 = primer) i guanya qui ha quedat primer més cops (desempat
+   * per segons, tercers, ...).
+   */
+  pointsLeagueMode?: "points" | "placement";
+  /**
    * Només `score_ranking`: sentit de la classificació. "desc" (per defecte)
    * = guanya qui té més punts; "asc" = guanya qui en té menys (p. ex. temps).
    */

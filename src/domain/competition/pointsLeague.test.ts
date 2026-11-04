@@ -247,3 +247,86 @@ describe("computePointsLeagueFinalStandings", () => {
     ]);
   });
 });
+
+describe("mode placement (posicions)", () => {
+  it("guanya qui ha quedat primer més cops", () => {
+    const teams = [team("a"), team("b"), team("c")];
+    const rounds = [
+      round("r1", 1, { a: 3, b: 1, c: 2 }),
+      round("r2", 2, { a: 1, b: 3, c: 2 }),
+      round("r3", 3, { a: 1, b: 2, c: 3 }),
+    ];
+    const standings = computePointsLeagueStandings(teams, rounds, "placement");
+    expect(standings.map((s) => s.teamId)).toEqual(["a", "b", "c"]);
+    expect(standings[0]).toEqual({
+      teamId: "a",
+      total: 2,
+      roundsScored: 3,
+      placements: [2, 0, 1],
+    });
+  });
+
+  it("desempata per segons llocs, després tercers", () => {
+    const teams = [team("a"), team("b"), team("c"), team("d")];
+    const rounds = [
+      round("r1", 1, { a: 1, b: 2, c: 3, d: 4 }),
+      round("r2", 2, { a: 4, b: 1, c: 2, d: 3 }),
+      round("r3", 3, { a: 3, b: 4, c: 1, d: 2 }),
+      round("r4", 4, { a: 2, b: 3, c: 4, d: 1 }),
+      round("r5", 5, { a: 2, b: 3, c: 4, d: 1 }),
+    ];
+    // d: 2 primers. a, b, c: 1 primer → a té 2 segons, c 1 segon + 1 tercer,
+    // b 1 segon + 2 tercers → b supera c pels tercers.
+    const standings = computePointsLeagueStandings(teams, rounds, "placement");
+    expect(standings.map((s) => s.teamId)).toEqual(["d", "a", "b", "c"]);
+  });
+
+  it("posicions compartides i absències (cel·la buida no compta)", () => {
+    const teams = [team("a"), team("b"), team("c")];
+    const rounds = [
+      round("r1", 1, { a: 1, b: 1, c: 3 }),
+      round("r2", 2, { a: 2, c: 1 }),
+    ];
+    const standings = computePointsLeagueStandings(teams, rounds, "placement");
+    expect(standings.map((s) => [s.teamId, s.placements])).toEqual([
+      ["a", [1, 1, 0]],
+      ["c", [1, 0, 1]],
+      ["b", [1, 0, 0]],
+    ]);
+  });
+
+  it("ignora valors invàlids (0, negatius, decimals)", () => {
+    const teams = [team("a")];
+    const rounds = [round("r1", 1, { a: 0 }), round("r2", 2, { a: 1.5 })];
+    const [s] = computePointsLeagueStandings(teams, rounds, "placement");
+    expect(s.roundsScored).toBe(0);
+    expect(s.total).toBe(0);
+  });
+
+  it("selectTopQualifiers inclou empatats totals al tall", () => {
+    const teams = [team("a"), team("b"), team("c")];
+    const rounds = [
+      round("r1", 1, { a: 1, b: 2, c: 2 }),
+    ];
+    const standings = computePointsLeagueStandings(teams, rounds, "placement");
+    expect(selectTopQualifiers(standings, 2)).toEqual(["a", "b", "c"]);
+  });
+
+  it("classificació final sense bracket amb empats densos", () => {
+    const teams = [team("a"), team("b"), team("c")];
+    const rounds = [
+      round("r1", 1, { a: 1, b: 2, c: 2 }),
+      round("r2", 2, { a: 3, b: 1, c: 1 }),
+    ];
+    const final = computePointsLeagueFinalStandings(
+      teams,
+      rounds,
+      [],
+      "placement"
+    );
+    expect(final).toEqual([
+      { position: 1, teamIds: ["b", "c"] },
+      { position: 2, teamIds: ["a"] },
+    ]);
+  });
+});
