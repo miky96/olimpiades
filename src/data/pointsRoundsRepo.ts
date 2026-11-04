@@ -76,6 +76,38 @@ export const pointsRoundsRepo = {
     );
   },
 
+  /** Desa diversos valors d'una ronda en una sola escriptura. */
+  async setScores(
+    seasonId: string,
+    eventId: string,
+    roundId: string,
+    values: Record<string, number>
+  ): Promise<void> {
+    const update: Record<string, number> = {};
+    for (const [teamId, value] of Object.entries(values)) {
+      update[`scores.${teamId}`] = value;
+    }
+    if (Object.keys(update).length === 0) return;
+    await updateDoc(
+      doc(getDb(), paths.pointsRound(seasonId, eventId, roundId)),
+      update
+    );
+  },
+
+  /** Esborra els valors de diversos participants en una sola escriptura. */
+  async clearScores(
+    seasonId: string,
+    eventId: string,
+    roundId: string,
+    teamIds: string[]
+  ): Promise<void> {
+    if (teamIds.length === 0) return;
+    await updateDoc(
+      doc(getDb(), paths.pointsRound(seasonId, eventId, roundId)),
+      Object.fromEntries(teamIds.map((id) => [`scores.${id}`, deleteField()]))
+    );
+  },
+
   /** Esborra la puntuació d'un participant (queda "sense puntuar"). */
   async clearScore(
     seasonId: string,

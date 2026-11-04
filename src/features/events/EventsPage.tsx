@@ -41,6 +41,9 @@ export function EventsPage() {
   const [format, setFormat] = useState<EventFormat>("bracket");
   const [groupSize, setGroupSize] = useState<3 | 4>(4);
   const [scoreOrder, setScoreOrder] = useState<"desc" | "asc">("desc");
+  const [pointsLeagueMode, setPointsLeagueMode] = useState<
+    "points" | "placement"
+  >("points");
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -95,6 +98,8 @@ export function EventsPage() {
             ? { groupSize, qualifiersPerGroup: 2 }
             : format === "score_ranking"
             ? { scoreOrder }
+            : format === "points_league_bracket"
+            ? { pointsLeagueMode }
             : {},
       };
       const trimmedName = name.trim();
@@ -221,6 +226,23 @@ export function EventsPage() {
                 >
                   <option value="desc">{scoreOrderLabels.desc}</option>
                   <option value="asc">{scoreOrderLabels.asc}</option>
+                </Select>
+              </Field>
+            ) : null}
+            {format === "points_league_bracket" ? (
+              <Field label="Puntuació de cada ronda">
+                <Select
+                  value={pointsLeagueMode}
+                  onChange={(e) =>
+                    setPointsLeagueMode(
+                      e.target.value as "points" | "placement"
+                    )
+                  }
+                >
+                  <option value="points">Per punts (guanya qui en suma més)</option>
+                  <option value="placement">
+                    Per posicions (guanya qui queda 1r més cops)
+                  </option>
                 </Select>
               </Field>
             ) : null}

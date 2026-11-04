@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Badge, Button, ErrorMessage, Field, Input } from "@/ui/forms";
+import { Badge, Button, ErrorMessage, Field, Input, Select } from "@/ui/forms";
 import { useDialog } from "@/ui/dialog/useDialog";
 import {
   attendanceRepo,
@@ -17,10 +17,13 @@ import {
   nextPowerOfTwo,
   onlyKnownParticipants,
   phaseForRoundsToFinal,
+  type PointsLeagueMode,
 } from "@/domain";
 import { useSeasons } from "@/features/seasons/useSeasons";
 import type { EventData } from "../../EventDetailPage";
 import { PointsLeagueScoresGrid } from "./PointsLeagueScoresGrid";
+import { formatPlacementSummary } from "./placementLabels";
+import { EliminationHelper } from "./EliminationHelper";
 import {
   addEmptyRound,
   generatePointsLeagueBracket,
@@ -55,6 +58,11 @@ const PHASE_ORDER: MatchPhase[] = [
 
 const QUALIFIER_PRESETS = [4, 8, 16];
 
+const MODE_LABELS: Record<PointsLeagueMode, string> = {
+  points: "Per punts (suma)",
+  placement: "Per posicions (més 1rs, després 2ns…)",
+};
+
 export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
   const dialog = useDialog();
   const { currentSeason } = useSeasons();
@@ -62,6 +70,7 @@ export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
     data;
   const seasonId = currentSeason?.id ?? "";
   const editable = !readOnly && event.status === "in_progress";
+  const mode: PointsLeagueMode = event.config.pointsLeagueMode ?? "points";
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,10 +80,39 @@ export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
 
   const bracketStarted = matches.length > 0;
   const standings = useMemo(
-    () => computePointsLeagueStandings(teams, pointsRounds),
-    [teams, pointsRounds]
+    () => computePointsLeagueStandings(teams, pointsRounds, mode),
+    [teams, pointsRounds, mode]
   );
   const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
+
+  async function handleModeChange(next: PointsLeagueMode) {
+    if (!editable || bracketStarted || next === mode) return;
+    const hasValues = pointsRounds.some((r) => Object.keys(r.scores).length > 0);
+    if (hasValues) {
+      const ok = await dialog.confirm({
+        title: "Canviar el mode de puntuació?",
+        message:
+          next === "placement"
+            ? "Els valors ja introduïts es llegiran com a posicions (1 = primer). Revisa'ls després del canvi."
+            : "Les posicions ja introduïdes es llegiran com a punts. Revisa-les després del canvi.",
+        confirmLabel: "Canviar",
+      });
+      if (!ok) return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      await eventsRepo.update(seasonId, event.id, {
+        config: { ...event.config, pointsLeagueMode: next },
+      });
+      await onChanged();
+    } catch (err) {
+      console.error(err);
+      setError("No s'ha pogut canviar el mode de puntuació.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function handleAddRound() {
     if (!editable || bracketStarted) return;
@@ -276,7 +314,8 @@ export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
       const finalStandings = computePointsLeagueFinalStandings(
         teams,
         pointsRounds,
-        matches
+        matches,
+        mode
       );
       const attendanceByParticipant = Object.fromEntries(
         fullAttendance.map((a) => [a.participantId, a])
@@ -345,10 +384,23 @@ export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
       <section className="card">
         <div className="card-header">
           <span>
-            Rondes de puntuació <Badge tone="slate">{pointsRounds.length}</Badge>
+            Rondes {mode === "placement" ? "per posicions" : "de puntuació"}{" "}
+            <Badge tone="slate">{pointsRounds.length}</Badge>
           </span>
           {editable && !bracketStarted ? (
-            <div className="flex flex-shrink-0 items-center gap-2">
+            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+              <Select
+                value={mode}
+                onChange={(e) =>
+                  handleModeChange(e.target.value as PointsLeagueMode)
+                }
+                className="h-8 w-auto py-0 text-xs"
+                aria-label="Mode de puntuació"
+                disabled={busy}
+              >
+                <option value="points">{MODE_LABELS.points}</option>
+                <option value="placement">{MODE_LABELS.placement}</option>
+              </Select>
               {pointsRounds.length > 0 ? (
                 <Button
                   variant="secondary"
@@ -370,6 +422,7 @@ export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
           eventId={event.id}
           teams={teams}
           rounds={pointsRounds}
+          mode={mode}
           editable={editable && !bracketStarted}
           onChanged={onChanged}
         />
@@ -380,6 +433,17 @@ export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
           </p>
         ) : null}
       </section>
+
+      {/* Ajuda per a jocs eliminatoris (mode per posicions) */}
+      {editable && !bracketStarted && mode === "placement" && pointsRounds.length > 0 ? (
+        <EliminationHelper
+          seasonId={seasonId}
+          eventId={event.id}
+          teams={teams}
+          rounds={pointsRounds}
+          onChanged={onChanged}
+        />
+      ) : null}
 
       {/* Setup del bracket (quan encara no s'ha generat) */}
       {editable && !bracketStarted ? (
@@ -507,6 +571,7 @@ export function PointsLeagueView({ data, readOnly, onChanged }: Props) {
         <PointsLeagueFinalSummary
           data={data}
           standings={standings}
+          mode={mode}
           onReopen={readOnly ? undefined : handleReopen}
         />
       ) : null}
@@ -632,16 +697,25 @@ function BracketLine({ name, isWinner }: { name: string; isWinner: boolean }) {
 function PointsLeagueFinalSummary({
   data,
   standings,
+  mode,
   onReopen,
 }: {
   data: EventData;
   standings: ReturnType<typeof computePointsLeagueStandings>;
+  mode: PointsLeagueMode;
   onReopen?: () => void;
 }) {
   const { event, teams, participants } = data;
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const participantById = new Map(participants.map((p) => [p.id, p]));
-  const totalsByTeam = new Map(standings.map((s) => [s.teamId, s.total]));
+  const standingByTeam = new Map(standings.map((s) => [s.teamId, s]));
+  const leagueLabel = (teamId: string): string | null => {
+    const s = standingByTeam.get(teamId);
+    if (!s) return null;
+    return mode === "placement"
+      ? formatPlacementSummary(s.placements)
+      : `${s.total} pts`;
+  };
 
   return (
     <section className="card relative overflow-hidden border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/5">
@@ -689,8 +763,8 @@ function PointsLeagueFinalSummary({
                     {s.teamIds
                       .map((tid) => {
                         const name = teamById.get(tid)?.name ?? tid;
-                        const pts = totalsByTeam.get(tid);
-                        return pts != null ? `${name} (${pts} pts)` : name;
+                        const label = leagueLabel(tid);
+                        return label != null ? `${name} (${label})` : name;
                       })
                       .join(", ")}
                   </span>
